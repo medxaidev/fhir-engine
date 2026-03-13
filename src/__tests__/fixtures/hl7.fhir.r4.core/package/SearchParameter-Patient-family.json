@@ -1,0 +1,12 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "Patient-family",
+  "url": "http://hl7.org/fhir/SearchParameter/Patient-family",
+  "version": "4.0.1",
+  "name": "family",
+  "status": "active",
+  "code": "family",
+  "base": ["Patient"],
+  "type": "string",
+  "expression": "Patient.name.family"
+}
