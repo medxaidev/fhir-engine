@@ -58,10 +58,22 @@ describe('createFhirEngine', () => {
     ).rejects.toThrow('config.packages.path is required');
   });
 
-  it('throws on postgres (not yet supported)', async () => {
+  it('throws on sqlite-wasm (removed in fhir-persistence v0.3.0)', async () => {
     await expect(
-      createFhirEngine({ database: { type: 'postgres', url: 'postgresql://localhost/test' }, packages: { path: FIXTURES_PATH }, logger: silent }),
-    ).rejects.toThrow('PostgreSQL adapter is not yet available');
+      createFhirEngine({ database: { type: 'sqlite-wasm', path: ':memory:' }, packages: { path: FIXTURES_PATH }, logger: silent }),
+    ).rejects.toThrow('sqlite-wasm adapter was removed');
+  });
+
+  it('throws on postgres when pg package is not installed', async () => {
+    // pg may or may not be installed — if not, expect a clear error message
+    try {
+      require.resolve('pg');
+      // pg IS installed — skip this test
+    } catch {
+      await expect(
+        createFhirEngine({ database: { type: 'postgres', url: 'postgresql://localhost/test' }, packages: { path: FIXTURES_PATH }, logger: silent }),
+      ).rejects.toThrow('requires the "pg" package');
+    }
   });
 
   it('non-existent packages path produces engine with empty resourceTypes', async () => {

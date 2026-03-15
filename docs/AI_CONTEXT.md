@@ -1,6 +1,6 @@
 # fhir-engine — AI Context Document
 
-**版本：** 0.4.1
+**版本：** 0.4.2
 **日期：** 2026-03-15
 **适用对象：** AI 编码助手（Copilot、Cascade、Claude 等）
 **用途：** 快速理解 fhir-engine 模块以执行代码任务
@@ -30,11 +30,11 @@
 
 ```
 名称:     fhir-engine
-版本:     0.4.1
+版本:     0.4.2
 层次:     Layer 2 (引擎层)
 职责:     将 Layer 1 的 3 个包组装为可运行的 FHIR 系统
 文件数:   7 个源文件
-测试数:   96 个
+测试数:   97 个
 构建输出: ESM (.mjs) + CJS (.cjs) + bundled .d.ts
 ```
 
@@ -68,8 +68,8 @@ src/
 │
 ├── adapter-factory.ts  → createAdapter(DatabaseConfig, Logger): StorageAdapter
 │                         sqlite → BetterSqlite3Adapter
-│                         sqlite-wasm → SQLiteAdapter
-│                         postgres → throw (上游阻断)
+│                         postgres → PostgresAdapter (pg.Pool, lazy-import)
+│                         sqlite-wasm → throw (已移除)
 │
 ├── config.ts           → defineConfig(): identity helper
 │                         loadFhirConfig(): 自动发现 + 环境变量覆盖
@@ -90,7 +90,7 @@ src/
 ├── index.ts            → 公开 API barrel (所有 exports 在这里)
 │
 └── __tests__/
-    ├── engine.test.ts          → 45 tests: config, bootstrap, CRUD, stop, status, search, re-exports
+    ├── engine.test.ts          → 47 tests: config, bootstrap, CRUD, stop, status, search, re-exports, pg
     ├── plugin.test.ts          → 28 tests: lifecycle, context, init/start/stop failures
     ├── config.test.ts          → 11 tests: defineConfig, loadFhirConfig, env overrides
     └── package-resolver.test.ts → 12 tests: local, cache, offline, idempotent, overrides, Firely cache fix
@@ -399,4 +399,4 @@ export default defineConfig({
 
 ---
 
-_fhir-engine v0.4.1 — AI Context Document_
+_fhir-engine v0.4.2 — AI Context Document_

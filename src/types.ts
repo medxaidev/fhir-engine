@@ -43,8 +43,14 @@ export interface SqliteWasmDatabaseConfig {
 
 export interface PostgresDatabaseConfig {
   type: 'postgres';
-  /** PostgreSQL connection string. */
+  /** PostgreSQL connection string (e.g. 'postgresql://user:pass@localhost:5432/fhir_db'). */
   url: string;
+  /** Maximum number of clients in the pool (default: 10). */
+  max?: number;
+  /** Idle timeout in milliseconds before a client is closed (default: 30000). */
+  idleTimeoutMillis?: number;
+  /** Connection timeout in milliseconds (default: 0 = no timeout). */
+  connectionTimeoutMillis?: number;
 }
 
 export type DatabaseConfig =

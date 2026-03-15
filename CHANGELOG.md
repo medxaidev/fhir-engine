@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-03-15
+
+### Added
+
+- **PostgreSQL support** — `database.type = 'postgres'` now creates a `PostgresAdapter` via `pg.Pool`, with full CRUD, search, schema migration, and dual-backend support. Requires `npm install pg` as a peer dependency.
+- **`PostgresDatabaseConfig` pool options** — New optional fields: `max`, `idleTimeoutMillis`, `connectionTimeoutMillis` for connection pool tuning
+- **Credential masking** — PostgreSQL connection URL is masked in log output (`//*****@`)
+
+### Changed
+
+- **`fhir-persistence` dependency** — upgraded from `^0.1.0` to `^0.3.0` (adds `PostgresAdapter`, `PostgresDialect`, dual-backend validation)
+- **`sqlite-wasm` adapter deprecated** — `SQLiteAdapter` was removed in fhir-persistence v0.3.0; `database.type = 'sqlite-wasm'` now throws a descriptive error directing users to `'sqlite'`
+- **Test suite expanded** — from 96 to 97 tests:
+  - New: sqlite-wasm deprecation error test, postgres pg-missing error test
+
+### Notes
+
+- PostgreSQL requires the `pg` npm package as a peer dependency (`npm install pg`)
+- The engine lazy-imports `pg` so SQLite-only projects incur no extra dependency
+- All existing SQLite functionality is unaffected
+
+---
+
 ## [0.4.1] - 2026-03-15
 
 ### Fixed

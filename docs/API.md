@@ -1,6 +1,6 @@
 # fhir-engine — API Reference
 
-**版本：** 0.4.1
+**版本：** 0.4.2
 **日期：** 2026-03-15
 **适用对象：** 开发者
 
@@ -255,10 +255,12 @@ interface SqliteDatabaseConfig {
 
 ### SqliteWasmDatabaseConfig
 
+> ⚠️ `sqlite-wasm` 已在 v0.4.2 移除（fhir-persistence v0.3.0 不再导出 `SQLiteAdapter`）。请使用 `type: 'sqlite'` 代替。
+
 ```typescript
 interface SqliteWasmDatabaseConfig {
   type: "sqlite-wasm";
-  path: string; // 文件路径或 ':memory:'
+  path: string;
 }
 ```
 
@@ -268,10 +270,26 @@ interface SqliteWasmDatabaseConfig {
 interface PostgresDatabaseConfig {
   type: "postgres";
   url: string; // PostgreSQL 连接字符串
+  max?: number; // 连接池大小（默认 10）
+  idleTimeoutMillis?: number; // 空闲超时（默认 30000ms）
+  connectionTimeoutMillis?: number; // 连接超时（默认 0 = 无限）
 }
 ```
 
-> ⚠️ PostgreSQL 当前不可用，`type: 'postgres'` 会抛出运行时异常。
+**示例：**
+
+```typescript
+const engine = await createFhirEngine({
+  database: {
+    type: "postgres",
+    url: "postgresql://user:pass@localhost:5432/fhir_db",
+    max: 20,
+  },
+  packages: { path: "./fhir-packages" },
+});
+```
+
+> ℹ️ PostgreSQL 需要安装 `pg` 包：`npm install pg`
 
 ---
 
@@ -418,11 +436,11 @@ function createAdapter(config: DatabaseConfig, logger: Logger): StorageAdapter;
 
 根据 `config.type` 创建对应的 `StorageAdapter`：
 
-| `config.type`   | 创建的适配器           | 状态      |
-| --------------- | ---------------------- | --------- |
-| `'sqlite'`      | `BetterSqlite3Adapter` | ✅        |
-| `'sqlite-wasm'` | `SQLiteAdapter`        | ✅        |
-| `'postgres'`    | —                      | ❌ 抛异常 |
+| `config.type`   | 创建的适配器           | 状态                      |
+| --------------- | ---------------------- | ------------------------- |
+| `'sqlite'`      | `BetterSqlite3Adapter` | ✅                        |
+| `'postgres'`    | `PostgresAdapter`      | ✅ (v0.4.2, 需要 `pg` 包) |
+| `'sqlite-wasm'` | —                      | ❌ 已移除，抛异常         |
 
 ---
 
@@ -674,4 +692,4 @@ export type { FhirPersistence, StorageAdapter } from "fhir-persistence";
 
 ---
 
-_fhir-engine v0.4.1 — API Reference_
+_fhir-engine v0.4.2 — API Reference_

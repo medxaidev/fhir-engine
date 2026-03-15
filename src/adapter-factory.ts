@@ -1,4 +1,4 @@
-import { BetterSqlite3Adapter, SQLiteAdapter } from 'fhir-persistence';
+import { BetterSqlite3Adapter, PostgresAdapter } from 'fhir-persistence';
 import type { StorageAdapter } from 'fhir-persistence';
 import type { DatabaseConfig, Logger } from './types.js';
 
@@ -7,8 +7,8 @@ import type { DatabaseConfig, Logger } from './types.js';
  *
  * Supported adapters:
  * - `sqlite`      → BetterSqlite3Adapter (native, Node.js / Electron)
- * - `sqlite-wasm` → SQLiteAdapter (sql.js WASM, browser / cross-platform)
- * - `postgres`    → not yet available (PostgresAdapter not exported from fhir-persistence)
+ * - `sqlite-wasm` → removed in fhir-persistence v0.3.0; use `sqlite` instead
+ * - `postgres`    → PostgresAdapter (pg connection pool)
  */
 export function createAdapter(config: DatabaseConfig, logger: Logger): StorageAdapter {
   switch (config.type) {
@@ -22,16 +22,30 @@ export function createAdapter(config: DatabaseConfig, logger: Logger): StorageAd
     }
 
     case 'sqlite-wasm': {
-      logger.info(`Creating SQLiteAdapter (WASM, path: ${config.path})`);
-      return new SQLiteAdapter(config.path);
+      throw new Error(
+        'fhir-engine: sqlite-wasm adapter was removed in fhir-persistence v0.3.0. ' +
+        'Use database.type = "sqlite" (BetterSqlite3Adapter) instead.',
+      );
     }
 
     case 'postgres': {
-      throw new Error(
-        'fhir-engine: PostgreSQL adapter is not yet available. ' +
-        'PostgresAdapter is not exported from fhir-persistence v0.1.0. ' +
-        'Use database.type = "sqlite" for now.',
-      );
+      logger.info(`Creating PostgresAdapter (url: ${config.url.replace(/\/\/.*@/, '//*****@')})`);
+      // Lazy-import pg to avoid hard dependency when using SQLite only
+      let Pool: any;
+      try {
+        Pool = require('pg').Pool;
+      } catch {
+        throw new Error(
+          'fhir-engine: PostgreSQL requires the "pg" package. Install it with: npm install pg',
+        );
+      }
+      const pool = new Pool({
+        connectionString: config.url,
+        max: config.max ?? 10,
+        idleTimeoutMillis: config.idleTimeoutMillis ?? 30000,
+        connectionTimeoutMillis: config.connectionTimeoutMillis ?? 0,
+      });
+      return new PostgresAdapter(pool);
     }
 
     default: {
