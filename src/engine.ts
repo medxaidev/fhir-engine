@@ -1,6 +1,6 @@
 import { loadDefinitionPackages } from 'fhir-definition';
 import { createRuntime, extractSearchValues, extractAllSearchValues, extractReferences } from 'fhir-runtime';
-import { FhirDefinitionBridge, FhirRuntimeProvider, FhirSystem } from 'fhir-persistence';
+import { FhirDefinitionBridge, FhirRuntimeProvider, FhirSystem, parseSearchRequest, executeSearch } from 'fhir-persistence';
 
 import { createAdapter } from './adapter-factory.js';
 import { loadFhirConfig } from './config.js';
@@ -189,6 +189,11 @@ export async function createFhirEngine(config?: FhirEngineConfig): Promise<FhirE
     resourceTypes,
     logger,
     context: ctx as EngineContext,
+
+    async search(resourceType, queryParams, options) {
+      const request = parseSearchRequest(resourceType, queryParams, spRegistry);
+      return executeSearch(adapter, request, spRegistry, options);
+    },
 
     status(): FhirEngineStatus {
       return {

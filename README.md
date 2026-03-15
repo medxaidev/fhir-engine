@@ -146,19 +146,20 @@ Creates and bootstraps a fully initialized FHIR engine.
 
 ### `FhirEngine`
 
-| Property        | Type                          | Description                                    |
-| --------------- | ----------------------------- | ---------------------------------------------- |
-| `definitions`   | `DefinitionRegistry`          | FHIR definitions from fhir-definition          |
-| `runtime`       | `FhirRuntimeInstance`         | FHIRPath, validation from fhir-runtime         |
-| `persistence`   | `FhirPersistence`             | CRUD + search + indexing from fhir-persistence |
-| `adapter`       | `StorageAdapter`              | Underlying database adapter                    |
-| `sdRegistry`    | `StructureDefinitionRegistry` | Loaded StructureDefinitions                    |
-| `spRegistry`    | `SearchParameterRegistry`     | Loaded SearchParameters                        |
-| `resourceTypes` | `string[]`                    | Resource types with database tables            |
-| `context`       | `EngineContext`               | Shared context (same object plugins receive)   |
-| `logger`        | `Logger`                      | Logger instance                                |
-| `status()`      | `() => FhirEngineStatus`      | Engine health and status information           |
-| `stop()`        | `() => Promise<void>`         | Gracefully shut down the engine                |
+| Property        | Type                                             | Description                                    |
+| --------------- | ------------------------------------------------ | ---------------------------------------------- |
+| `definitions`   | `DefinitionRegistry`                             | FHIR definitions from fhir-definition          |
+| `runtime`       | `FhirRuntimeInstance`                            | FHIRPath, validation from fhir-runtime         |
+| `persistence`   | `FhirPersistence`                                | CRUD + search + indexing from fhir-persistence |
+| `adapter`       | `StorageAdapter`                                 | Underlying database adapter                    |
+| `sdRegistry`    | `StructureDefinitionRegistry`                    | Loaded StructureDefinitions                    |
+| `spRegistry`    | `SearchParameterRegistry`                        | Loaded SearchParameters                        |
+| `resourceTypes` | `string[]`                                       | Resource types with database tables            |
+| `context`       | `EngineContext`                                  | Shared context (same object plugins receive)   |
+| `logger`        | `Logger`                                         | Logger instance                                |
+| `search()`      | `(type, params, opts?) => Promise<SearchResult>` | High-level FHIR search                         |
+| `status()`      | `() => FhirEngineStatus`                         | Engine health and status information           |
+| `stop()`        | `() => Promise<void>`                            | Gracefully shut down the engine                |
 
 ### `FhirEngineConfig`
 
@@ -187,6 +188,46 @@ interface FhirEngineStatus {
   startedAt: Date;
   plugins: string[]; // registered plugin names
 }
+```
+
+### `engine.search(resourceType, queryParams, options?)`
+
+High-level FHIR search — parses URL query parameters and executes search in one call:
+
+```ts
+const result = await engine.search("Patient", { name: "Smith", _count: "10" });
+console.log(result.resources); // PersistedResource[]
+console.log(result.total); // number (if options.total = 'accurate')
+```
+
+### Search Utilities (re-exported from fhir-persistence)
+
+For lower-level search control:
+
+```ts
+import { parseSearchRequest, executeSearch } from "fhir-engine";
+import type { SearchRequest, SearchResult, SearchOptions } from "fhir-engine";
+
+const request = parseSearchRequest(
+  "Patient",
+  { name: "Smith" },
+  engine.spRegistry,
+);
+const result = await executeSearch(engine.adapter, request, engine.spRegistry);
+```
+
+### FHIRPath Evaluation (re-exported from fhir-runtime)
+
+```ts
+import {
+  evalFhirPath,
+  evalFhirPathBoolean,
+  evalFhirPathString,
+} from "fhir-engine";
+
+const values = evalFhirPath("Patient.name.family", patient); // unknown[]
+const active = evalFhirPathBoolean("Patient.active", patient); // boolean
+const family = evalFhirPathString("Patient.name.family", patient); // string | undefined
 ```
 
 ### `defineConfig(config)`

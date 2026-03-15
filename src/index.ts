@@ -23,3 +23,16 @@ export type {
 export type { DefinitionRegistry, DefinitionProvider } from 'fhir-definition';
 export type { FhirRuntimeInstance } from 'fhir-runtime';
 export type { FhirPersistence, StorageAdapter } from 'fhir-persistence';
+
+// ---------------------------------------------------------------------------
+// Search utilities (from fhir-persistence)
+// ---------------------------------------------------------------------------
+
+export { parseSearchRequest, executeSearch } from 'fhir-persistence';
+export type { SearchRequest, SearchResult, SearchOptions } from 'fhir-persistence';
+
+// ---------------------------------------------------------------------------
+// FHIRPath evaluation (from fhir-runtime)
+// ---------------------------------------------------------------------------
+
+export { evalFhirPath, evalFhirPathBoolean, evalFhirPathString, evalFhirPathTyped } from 'fhir-runtime';

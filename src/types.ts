@@ -4,6 +4,8 @@ import type {
   FhirPersistence,
   FhirSystemReady,
   SearchParameterRegistry,
+  SearchResult,
+  SearchOptions,
   StorageAdapter,
   StructureDefinitionRegistry,
 } from 'fhir-persistence';
@@ -156,6 +158,19 @@ export interface FhirEngine {
   readonly logger: Logger;
   /** Shared context (same object plugins receive). */
   readonly context: EngineContext;
+  /**
+   * High-level FHIR search — parses query params, executes search, returns results.
+   *
+   * @param resourceType - The FHIR resource type (e.g. 'Patient').
+   * @param queryParams - URL query parameters (e.g. `{ name: 'Smith', _count: '10' }`).
+   * @param options - Optional search options (e.g. `{ total: 'accurate' }`).
+   * @returns Search result with matched resources, includes, and optional total.
+   */
+  search(
+    resourceType: string,
+    queryParams: Record<string, string | string[] | undefined>,
+    options?: SearchOptions,
+  ): Promise<SearchResult>;
   /** Return engine health/status information. */
   status(): FhirEngineStatus;
   /** Gracefully shut down the engine (closes adapter). */

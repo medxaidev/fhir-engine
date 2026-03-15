@@ -382,4 +382,101 @@ describe('createFhirEngine', () => {
     });
     expect(engine.logger).toBeDefined();
   });
+
+  // ── engine.search() (6 tests) ─────────────────────────────────
+
+  it('search() returns results for created patients', async () => {
+    engine = await createFhirEngine(baseConfig());
+
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Searchable' }],
+    });
+
+    const result = await engine.search('Patient', {});
+    expect(result).toBeDefined();
+    expect(result.resources).toBeDefined();
+    expect(result.resources.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('search() returns empty results for no matching resources', async () => {
+    engine = await createFhirEngine(baseConfig());
+
+    const result = await engine.search('Patient', {});
+    expect(result.resources).toEqual([]);
+  });
+
+  it('search() result has correct resource structure', async () => {
+    engine = await createFhirEngine(baseConfig());
+
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'StructureTest' }],
+    });
+
+    const result = await engine.search('Patient', {});
+    const patient = result.resources[0] as any;
+    expect(patient.resourceType).toBe('Patient');
+    expect(patient.id).toBeDefined();
+    expect(patient.meta).toBeDefined();
+  });
+
+  it('search() is a function on the engine', async () => {
+    engine = await createFhirEngine(baseConfig());
+    expect(typeof engine.search).toBe('function');
+  });
+
+  it('search() works with multiple created resources', async () => {
+    engine = await createFhirEngine(baseConfig());
+
+    for (let i = 0; i < 3; i++) {
+      await engine.persistence.createResource('Patient', {
+        resourceType: 'Patient',
+        name: [{ family: `Multi${i}` }],
+      });
+    }
+
+    const result = await engine.search('Patient', {});
+    expect(result.resources.length).toBe(3);
+  });
+
+  it('search() returns a Promise', async () => {
+    engine = await createFhirEngine(baseConfig());
+    const result = engine.search('Patient', {});
+    expect(result).toBeInstanceOf(Promise);
+    await result;
+  });
+
+  // ── Re-exported FHIRPath functions (5 tests) ──────────────────
+
+  it('evalFhirPath is re-exported and evaluates expressions', async () => {
+    const { evalFhirPath } = await import('../index.js');
+    const patient = { resourceType: 'Patient', name: [{ family: 'Test' }] };
+    const result = evalFhirPath('Patient.name.family', patient);
+    expect(result).toEqual(['Test']);
+  });
+
+  it('evalFhirPathBoolean is re-exported and returns boolean', async () => {
+    const { evalFhirPathBoolean } = await import('../index.js');
+    const patient = { resourceType: 'Patient', active: true };
+    const result = evalFhirPathBoolean('Patient.active', patient);
+    expect(result).toBe(true);
+  });
+
+  it('evalFhirPathString is re-exported and returns string', async () => {
+    const { evalFhirPathString } = await import('../index.js');
+    const patient = { resourceType: 'Patient', name: [{ family: 'StringTest' }] };
+    const result = evalFhirPathString('Patient.name.family', patient);
+    expect(result).toBe('StringTest');
+  });
+
+  it('parseSearchRequest is re-exported', async () => {
+    const { parseSearchRequest } = await import('../index.js');
+    expect(typeof parseSearchRequest).toBe('function');
+  });
+
+  it('executeSearch is re-exported', async () => {
+    const { executeSearch } = await import('../index.js');
+    expect(typeof executeSearch).toBe('function');
+  });
 });

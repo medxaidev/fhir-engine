@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-15
+
+### Added
+
+- **`engine.search(resourceType, queryParams, options?)`** — High-level FHIR search method on the engine instance; parses query parameters and executes search in one call, returning `SearchResult` with matched resources, includes, and optional total
+- **Re-exported search utilities** — `parseSearchRequest`, `executeSearch` functions and `SearchRequest`, `SearchResult`, `SearchOptions` types from `fhir-persistence`
+- **Re-exported FHIRPath functions** — `evalFhirPath`, `evalFhirPathBoolean`, `evalFhirPathString`, `evalFhirPathTyped` from `fhir-runtime`
+
+### Changed
+
+- **Test suite expanded** — from 73 to 84 tests:
+  - engine.search(): 6 tests
+  - Re-exported API verification: 5 tests (evalFhirPath, evalFhirPathBoolean, evalFhirPathString, parseSearchRequest, executeSearch)
+
+### Notes
+
+- Resolves `FHIR_ENGINE_API_GAP_REQUEST.md` — fhir-cli can now import search and FHIRPath APIs from `fhir-engine` without violating the Layer 1 import restriction
+
+---
+
 ## [0.2.0] - 2026-03-15
 
 ### Added
