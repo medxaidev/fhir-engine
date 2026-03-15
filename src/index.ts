@@ -4,6 +4,7 @@ export { createFhirEngine } from './engine.js';
 export { defineConfig, loadFhirConfig } from './config.js';
 export { createConsoleLogger } from './logger.js';
 export { createAdapter } from './adapter-factory.js';
+export { resolvePackages } from './package-resolver.js';
 
 export type {
   FhirEngine,
@@ -17,6 +18,9 @@ export type {
   PostgresDatabaseConfig,
   PackagesConfig,
   Logger,
+  ResolvePackagesOptions,
+  ResolvedPackage,
+  ResolvePackagesResult,
 } from './types.js';
 
 // Re-export key upstream types for convenience

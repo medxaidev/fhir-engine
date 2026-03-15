@@ -1,6 +1,6 @@
 # fhir-engine — API Reference
 
-**版本：** 0.3.0
+**版本：** 0.4.0
 **日期：** 2026-03-15
 **适用对象：** 开发者
 
@@ -18,9 +18,10 @@
 8. [Logger](#8-logger)
 9. [配置系统](#9-配置系统)
 10. [适配器工厂](#10-适配器工厂)
-11. [搜索 API](#11-搜索-api)
-12. [FHIRPath API](#12-fhirpath-api)
-13. [Re-exported 上游类型](#13-re-exported-上游类型)
+11. [包解析 API](#11-包解析-api)
+12. [搜索 API](#12-搜索-api)
+13. [FHIRPath API](#13-fhirpath-api)
+14. [Re-exported 上游类型](#14-re-exported-上游类型)
 
 ---
 
@@ -200,6 +201,8 @@ interface FhirEngineStatus {
 interface FhirEngineConfig {
   database: DatabaseConfig;
   packages: PackagesConfig;
+  igs?: Array<{ name: string; version?: string }>;
+  packageResolve?: { allowDownload?: boolean };
   packageName?: string;
   packageVersion?: string;
   logger?: Logger;
@@ -207,14 +210,16 @@ interface FhirEngineConfig {
 }
 ```
 
-| 字段             | 类型                 | 必填 | 默认值                  | 说明            |
-| ---------------- | -------------------- | ---- | ----------------------- | --------------- |
-| `database`       | `DatabaseConfig`     | ✅   | —                       | 数据库连接配置  |
-| `packages`       | `PackagesConfig`     | ✅   | —                       | FHIR 包目录配置 |
-| `packageName`    | `string`             | 否   | `'fhir-engine.default'` | IG 迁移标签     |
-| `packageVersion` | `string`             | 否   | `'1.0.0'`               | IG 迁移版本     |
-| `logger`         | `Logger`             | 否   | `createConsoleLogger()` | 自定义日志器    |
-| `plugins`        | `FhirEnginePlugin[]` | 否   | `[]`                    | 插件列表        |
+| 字段             | 类型                                        | 必填 | 默认值                    | 说明                             |
+| ---------------- | ------------------------------------------- | ---- | ------------------------- | -------------------------------- |
+| `database`       | `DatabaseConfig`                            | ✅   | —                         | 数据库连接配置                   |
+| `packages`       | `PackagesConfig`                            | ✅   | —                         | FHIR 包目录配置                  |
+| `igs`            | `Array<{ name: string; version?: string }>` | 否   | —                         | IG 包列表，启动前自动解析        |
+| `packageResolve` | `{ allowDownload?: boolean }`               | 否   | `{ allowDownload: true }` | 包解析选项（`false` = 离线模式） |
+| `packageName`    | `string`                                    | 否   | `'fhir-engine.default'`   | IG 迁移标签                      |
+| `packageVersion` | `string`                                    | 否   | `'1.0.0'`                 | IG 迁移版本                      |
+| `logger`         | `Logger`                                    | 否   | `createConsoleLogger()`   | 自定义日志器                     |
+| `plugins`        | `FhirEnginePlugin[]`                        | 否   | `[]`                      | 插件列表                         |
 
 ### PackagesConfig
 
@@ -421,7 +426,84 @@ function createAdapter(config: DatabaseConfig, logger: Logger): StorageAdapter;
 
 ---
 
-## 11. 搜索 API
+## 11. 包解析 API
+
+### resolvePackages()
+
+```typescript
+async function resolvePackages(
+  config: FhirEngineConfig,
+  options?: ResolvePackagesOptions,
+): Promise<ResolvePackagesResult>;
+```
+
+确保 config 中列出的所有 FHIR 包在项目的 `packages.path` 目录中可用。
+
+**解析顺序：**
+
+1. 本地已存在 → `source: 'local'`
+2. 系统缓存命中 (`~/.fhir/packages`) → 创建链接，`source: 'cache'`
+3. 从 FHIR Package Registry 下载 → 缓存 → 创建链接，`source: 'download'`
+
+**参数：**
+
+| 参数      | 类型                     | 必填 | 说明                                      |
+| --------- | ------------------------ | ---- | ----------------------------------------- |
+| `config`  | `FhirEngineConfig`       | ✅   | 引擎配置（读取 `igs` 和 `packages.path`） |
+| `options` | `ResolvePackagesOptions` | 否   | 覆盖包列表、目标路径、下载策略            |
+
+**示例：**
+
+```typescript
+import { resolvePackages } from "fhir-engine";
+
+// 自动解析 config.igs 中的所有包
+const result = await resolvePackages(config);
+
+// 手动指定要解析的包
+const result = await resolvePackages(config, {
+  packages: [{ name: "hl7.fhir.r4.core", version: "4.0.1" }],
+});
+
+// 离线模式 — 仅使用本地和缓存
+const result = await resolvePackages(config, { allowDownload: false });
+```
+
+### ResolvePackagesOptions
+
+```typescript
+interface ResolvePackagesOptions {
+  packages?: Array<{ name: string; version?: string }>; // 覆盖 config.igs
+  packagesPath?: string; // 覆盖 config.packages.path
+  allowDownload?: boolean; // 默认 true
+  logger?: Logger;
+}
+```
+
+### ResolvedPackage
+
+```typescript
+interface ResolvedPackage {
+  name: string;
+  version: string;
+  path: string;
+  source: "cache" | "download" | "local";
+}
+```
+
+### ResolvePackagesResult
+
+```typescript
+interface ResolvePackagesResult {
+  success: boolean;
+  packages: ResolvedPackage[];
+  errors: Array<{ name: string; error: string }>;
+}
+```
+
+---
+
+## 12. 搜索 API
 
 ### engine.search()
 
@@ -497,7 +579,7 @@ interface SearchOptions {
 
 ---
 
-## 12. FHIRPath API
+## 13. FHIRPath API
 
 所有 FHIRPath 求值函数从 `fhir-runtime` 重新导出：
 
@@ -575,7 +657,7 @@ function evalFhirPathTyped(
 
 ---
 
-## 13. Re-exported 上游类型
+## 14. Re-exported 上游类型
 
 以下类型从上游包 re-export，方便消费方直接从 `fhir-engine` 导入：
 
@@ -592,4 +674,4 @@ export type { FhirPersistence, StorageAdapter } from "fhir-persistence";
 
 ---
 
-_fhir-engine v0.3.0 — API Reference_
+_fhir-engine v0.4.0 — API Reference_

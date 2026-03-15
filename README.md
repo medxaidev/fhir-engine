@@ -10,6 +10,7 @@
 ## Features
 
 - **One-call bootstrap** — `createFhirEngine(config)` initializes definitions, runtime, and persistence
+- **Package resolution** — `resolvePackages()` downloads/caches FHIR IG packages automatically
 - **Plugin system** — lifecycle hooks (`init` / `start` / `ready` / `stop`) for extensibility
 - **Config file support** — `fhir.config.ts` / `.js` / `.json` with env variable overrides
 - **Multi-adapter** — SQLite (native + WASM) out of the box, PostgreSQL planned
@@ -167,11 +168,24 @@ Creates and bootstraps a fully initialized FHIR engine.
 interface FhirEngineConfig {
   database: DatabaseConfig; // sqlite | sqlite-wasm | postgres
   packages: PackagesConfig; // { path: string }
+  igs?: Array<{ name: string; version?: string }>; // IG packages to resolve
+  packageResolve?: { allowDownload?: boolean }; // resolution options
   packageName?: string; // IG migration label
   packageVersion?: string; // IG migration version
   logger?: Logger; // custom logger (default: console)
   plugins?: FhirEnginePlugin[]; // plugins array
 }
+```
+
+When `igs` is provided, `createFhirEngine()` automatically resolves packages before loading definitions:
+
+```ts
+const engine = await createFhirEngine({
+  database: { type: "sqlite", path: ":memory:" },
+  packages: { path: "./fhir-packages" },
+  igs: [{ name: "hl7.fhir.r4.core", version: "4.0.1" }],
+});
+// Packages are downloaded/linked into ./fhir-packages/ automatically
 ```
 
 ### `FhirEngineStatus`
@@ -228,6 +242,24 @@ import {
 const values = evalFhirPath("Patient.name.family", patient); // unknown[]
 const active = evalFhirPathBoolean("Patient.active", patient); // boolean
 const family = evalFhirPathString("Patient.name.family", patient); // string | undefined
+```
+
+### `resolvePackages(config, options?)`
+
+Ensure FHIR IG packages are available in the project's packages directory.
+
+Resolution order: local directory → system cache (`~/.fhir/packages`) → FHIR Package Registry download.
+
+```ts
+import { resolvePackages } from "fhir-engine";
+
+const result = await resolvePackages(config);
+console.log(result.success); // true if all resolved
+console.log(result.packages); // ResolvedPackage[] with name, version, path, source
+console.log(result.errors); // any failures
+
+// Offline mode — cache only, no downloads
+const offline = await resolvePackages(config, { allowDownload: false });
 ```
 
 ### `defineConfig(config)`

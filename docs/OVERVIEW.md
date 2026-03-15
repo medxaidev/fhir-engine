@@ -1,6 +1,6 @@
 # fhir-engine — 项目概览
 
-**版本：** 0.3.0
+**版本：** 0.4.0
 **日期：** 2026-03-15
 **层次：** Layer 2 — FHIR 引擎层
 
@@ -31,7 +31,23 @@
 
 ## 2. 核心功能
 
-### 2.1 高层搜索 API
+### 2.1 包解析
+
+```typescript
+import { resolvePackages } from "fhir-engine";
+
+// 自动解析 config.igs 中的所有包（本地 → 缓存 → 下载）
+const result = await resolvePackages(config);
+
+// 或通过 config.igs 自动解析
+const engine = await createFhirEngine({
+  database: { type: "sqlite", path: ":memory:" },
+  packages: { path: "./fhir-packages" },
+  igs: [{ name: "hl7.fhir.r4.core", version: "4.0.1" }],
+});
+```
+
+### 2.2 高层搜索 API
 
 ```typescript
 // 方式 1：使用 engine.search() 高层方法
@@ -47,7 +63,7 @@ const request = parseSearchRequest(
 const result = await executeSearch(engine.adapter, request, engine.spRegistry);
 ```
 
-### 2.2 FHIRPath 求值
+### 2.3 FHIRPath 求值
 
 ```typescript
 import {
@@ -61,7 +77,7 @@ const active = evalFhirPathBoolean("Patient.active", patient); // boolean
 const family = evalFhirPathString("Patient.name.family", patient); // 'Smith'
 ```
 
-### 2.3 单入口启动
+### 2.4 单入口启动
 
 ```typescript
 import { createFhirEngine } from "fhir-engine";
@@ -80,7 +96,7 @@ const engine = await createFhirEngine({
 - 执行 Schema 迁移
 - 初始化持久化层（CRUD + 搜索 + 索引）
 
-### 2.4 插件系统
+### 2.5 插件系统
 
 ```typescript
 const engine = await createFhirEngine({
@@ -99,7 +115,7 @@ const engine = await createFhirEngine({
 | `ready` | 所有插件 start 完成 | ✅ 可用           |
 | `stop`  | 关闭时（逆序执行）  | ✅ 可用           |
 
-### 2.5 配置文件支持
+### 2.6 配置文件支持
 
 ```typescript
 // 零参数启动 — 自动发现 fhir.config.{ts,js,mjs,json}
@@ -112,7 +128,7 @@ const engine = await createFhirEngine();
 - `FHIR_DATABASE_URL` → `config.database.path` / `.url`
 - `FHIR_PACKAGES_PATH` → `config.packages.path`
 
-### 2.6 引擎状态查询
+### 2.7 引擎状态查询
 
 ```typescript
 const status = engine.status();
@@ -197,7 +213,7 @@ npm install
 # 构建（tsc + api-extractor + esbuild）
 npm run build
 
-# 运行测试（73 个测试）
+# 运行测试（95 个测试）
 npm test
 
 # 发布前检查
@@ -213,6 +229,7 @@ npm pack --dry-run
 
 | 版本  | 日期       | 关键变更                                                |
 | ----- | ---------- | ------------------------------------------------------- |
+| 0.4.0 | 2026-03-15 | `resolvePackages()`, `config.igs` 自动解析, 95 个测试   |
 | 0.3.0 | 2026-03-15 | `engine.search()`, 重新导出搜索/FHIRPath API, 84 个测试 |
 | 0.2.0 | 2026-03-15 | `engine.status()`, 测试套件 73 个, 配置文件系统         |
 | 0.1.0 | 2026-03-15 | 核心启动, 插件系统, defineConfig, 零参数启动            |
@@ -226,4 +243,4 @@ npm pack --dry-run
 
 ---
 
-_fhir-engine v0.3.0 — 项目概览_
+_fhir-engine v0.4.0 — 项目概览_

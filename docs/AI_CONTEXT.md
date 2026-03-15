@@ -1,6 +1,6 @@
 # fhir-engine — AI Context Document
 
-**版本：** 0.3.0
+**版本：** 0.4.0
 **日期：** 2026-03-15
 **适用对象：** AI 编码助手（Copilot、Cascade、Claude 等）
 **用途：** 快速理解 fhir-engine 模块以执行代码任务
@@ -13,8 +13,9 @@
 | -------------------- | --------------------------------------------- |
 | 了解项目架构         | 本文件 §1-§3                                  |
 | 调用 fhir-engine API | 本文件 §4 + `docs/API.md`                     |
-| 使用搜索 API         | 本文件 §4 + `docs/API.md` §11                 |
-| 使用 FHIRPath        | 本文件 §4 + `docs/API.md` §12                 |
+| 使用包解析 API       | 本文件 §4 + `docs/API.md` §11                 |
+| 使用搜索 API         | 本文件 §4 + `docs/API.md` §12                 |
+| 使用 FHIRPath        | 本文件 §4 + `docs/API.md` §13                 |
 | 写插件               | 本文件 §5                                     |
 | 添加测试             | 本文件 §7 + `src/__tests__/*.test.ts`         |
 | 修改引擎启动逻辑     | `src/engine.ts`                               |
@@ -29,11 +30,11 @@
 
 ```
 名称:     fhir-engine
-版本:     0.3.0
+版本:     0.4.0
 层次:     Layer 2 (引擎层)
 职责:     将 Layer 1 的 3 个包组装为可运行的 FHIR 系统
-文件数:   6 个源文件
-测试数:   84 个
+文件数:   7 个源文件
+测试数:   95 个
 构建输出: ESM (.mjs) + CJS (.cjs) + bundled .d.ts
 ```
 
@@ -74,19 +75,25 @@ src/
 │                         loadFhirConfig(): 自动发现 + 环境变量覆盖
 │                         applyEnvOverrides(): FHIR_DATABASE_TYPE/URL, FHIR_PACKAGES_PATH
 │
+├── package-resolver.ts → resolvePackages() 包解析（本地 → 缓存 → 下载）
+│                         使用 PackageCache + PackageRegistryClient from fhir-definition
+│                         Windows: junction, Unix: symlink
+│
 ├── types.ts            → 所有类型定义:
 │                         FhirEngineConfig, DatabaseConfig, PackagesConfig
 │                         FhirEngine, FhirEngineStatus, FhirEnginePlugin
 │                         EngineContext, Logger
+│                         ResolvePackagesOptions, ResolvedPackage, ResolvePackagesResult
 │
 ├── logger.ts           → createConsoleLogger(): Logger
 │
 ├── index.ts            → 公开 API barrel (所有 exports 在这里)
 │
 └── __tests__/
-    ├── engine.test.ts  → 36 tests: config validation, bootstrap, CRUD, stop, status, logger
-    ├── plugin.test.ts  → 21 tests: lifecycle order, context, init/start/stop failures
-    └── config.test.ts  → 16 tests: defineConfig, loadFhirConfig, env overrides
+    ├── engine.test.ts          → 45 tests: config, bootstrap, CRUD, stop, status, search, re-exports
+    ├── plugin.test.ts          → 28 tests: lifecycle, context, init/start/stop failures
+    ├── config.test.ts          → 11 tests: defineConfig, loadFhirConfig, env overrides
+    └── package-resolver.test.ts → 11 tests: local, cache, offline, idempotent, overrides
 ```
 
 ---
@@ -102,6 +109,9 @@ createFhirEngine(config?: FhirEngineConfig): Promise<FhirEngine>
 // 配置辅助
 defineConfig(config: FhirEngineConfig): FhirEngineConfig
 loadFhirConfig(configPath?: string): Promise<FhirEngineConfig>
+
+// 包解析 (v0.4.0)
+resolvePackages(config: FhirEngineConfig, options?: ResolvePackagesOptions): Promise<ResolvePackagesResult>
 
 // 搜索工具 (v0.3.0)
 parseSearchRequest(resourceType: string, queryParams: Record<string, string | string[] | undefined>, registry?: SearchParameterRegistry): SearchRequest
@@ -137,6 +147,11 @@ PackagesConfig;
 
 // 日志
 Logger; // { debug, info, warn, error }
+
+// 包解析类型 (v0.4.0)
+ResolvePackagesOptions; // resolvePackages() 参数
+ResolvedPackage; // 单个包解析结果
+ResolvePackagesResult; // resolvePackages() 返回值
 
 // 搜索类型 (v0.3.0)
 SearchRequest; // from fhir-persistence
@@ -384,4 +399,4 @@ export default defineConfig({
 
 ---
 
-_fhir-engine v0.3.0 — AI Context Document_
+_fhir-engine v0.4.0 — AI Context Document_

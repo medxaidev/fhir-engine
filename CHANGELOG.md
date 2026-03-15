@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-15
+
+### Added
+
+- **`resolvePackages(config, options?)`** — New top-level API that ensures FHIR IG packages are available in the project's `packages.path` directory before engine bootstrap. Resolution order: local → system cache (`~/.fhir/packages`) → FHIR Package Registry download. Returns `ResolvePackagesResult` with per-package status and errors.
+- **`config.igs`** — New optional `FhirEngineConfig` field listing IG packages to resolve (e.g. `[{ name: 'hl7.fhir.r4.core', version: '4.0.1' }]`). When set, `createFhirEngine()` automatically calls `resolvePackages()` before loading definitions.
+- **`config.packageResolve`** — New optional config field for resolution options (e.g. `{ allowDownload: false }` for offline mode).
+- **Type exports** — `ResolvePackagesOptions`, `ResolvedPackage`, `ResolvePackagesResult`
+- **New source file** — `src/package-resolver.ts`
+
+### Changed
+
+- **`createFhirEngine()` bootstrap** — Now includes a package resolution step (§1a) before loading definitions, triggered when `config.igs` is present. Backward compatible: omitting `igs` preserves v0.3.0 behavior.
+- **Test suite expanded** — from 84 to 95 tests:
+  - resolvePackages(): 11 tests covering local detection, cache linking, offline errors, idempotency, option overrides, directory creation, and re-export verification
+
+### Notes
+
+- Resolves `FHIR_ENGINE_RESOLVE_PACKAGES_API.md` — fhir-cli `fhir new` / `fhir ig install` workflows can now use `resolvePackages()` to ensure packages are available before engine startup
+- Uses Windows `junction` links (no admin required) and Unix `symlink` for linking cached packages
+
+---
+
 ## [0.3.0] - 2026-03-15
 
 ### Added

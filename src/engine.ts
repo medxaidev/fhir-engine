@@ -5,6 +5,7 @@ import { FhirDefinitionBridge, FhirRuntimeProvider, FhirSystem, parseSearchReque
 import { createAdapter } from './adapter-factory.js';
 import { loadFhirConfig } from './config.js';
 import { createConsoleLogger } from './logger.js';
+import { resolvePackages } from './package-resolver.js';
 import type { EngineContext, FhirEngine, FhirEngineConfig, FhirEnginePlugin, FhirEngineStatus } from './types.js';
 
 /**
@@ -95,7 +96,21 @@ export async function createFhirEngine(config?: FhirEngineConfig): Promise<FhirE
   const plugins = config.plugins ?? [];
   logger.info('Initializing fhir-engine...');
 
-  // ── 1. Load FHIR definitions ─────────────────────────────────
+  // ── 1a. Resolve packages (download/link if config.igs is set) ─
+  if (config.igs && config.igs.length > 0) {
+    logger.info(`Resolving ${config.igs.length} IG package(s)...`);
+    const resolveResult = await resolvePackages(config, { logger });
+    for (const pkg of resolveResult.packages) {
+      logger.info(`Resolved ${pkg.name}@${pkg.version} (${pkg.source})`);
+    }
+    if (!resolveResult.success) {
+      for (const err of resolveResult.errors) {
+        logger.warn(`Failed to resolve package ${err.name}: ${err.error}`);
+      }
+    }
+  }
+
+  // ── 1b. Load FHIR definitions ─────────────────────────────────
   logger.info(`Loading FHIR packages from: ${config.packages.path}`);
   const { registry, result } = loadDefinitionPackages(config.packages.path);
   logger.info(

@@ -70,6 +70,10 @@ export interface FhirEngineConfig {
   database: DatabaseConfig;
   /** FHIR package loading configuration. */
   packages: PackagesConfig;
+  /** IG list to resolve before loading (downloaded/linked into packages.path). */
+  igs?: Array<{ name: string; version?: string }>;
+  /** Package resolution options. */
+  packageResolve?: { allowDownload?: boolean };
   /** IG migration label (default: package.json name or 'fhir-engine.default'). */
   packageName?: string;
   /** IG migration version (default: package.json version or '1.0.0'). */
@@ -78,6 +82,41 @@ export interface FhirEngineConfig {
   logger?: Logger;
   /** Plugins to register (executed in registration order). */
   plugins?: FhirEnginePlugin[];
+}
+
+// ---------------------------------------------------------------------------
+// Package resolution
+// ---------------------------------------------------------------------------
+
+export interface ResolvePackagesOptions {
+  /** Packages to resolve. Defaults to config.igs. */
+  packages?: Array<{ name: string; version?: string }>;
+  /** Target directory for resolved packages. Defaults to config.packages.path. */
+  packagesPath?: string;
+  /** Allow network downloads. Default: true. */
+  allowDownload?: boolean;
+  /** Logger instance. */
+  logger?: Logger;
+}
+
+export interface ResolvedPackage {
+  /** Package name (e.g. 'hl7.fhir.r4.core'). */
+  name: string;
+  /** Resolved version. */
+  version: string;
+  /** Path in the project packages directory. */
+  path: string;
+  /** How the package was resolved. */
+  source: 'cache' | 'download' | 'local';
+}
+
+export interface ResolvePackagesResult {
+  /** True if all packages resolved without errors. */
+  success: boolean;
+  /** Successfully resolved packages. */
+  packages: ResolvedPackage[];
+  /** Packages that failed to resolve. */
+  errors: Array<{ name: string; error: string }>;
 }
 
 // ---------------------------------------------------------------------------
