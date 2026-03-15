@@ -1,12 +1,15 @@
 // fhir-engine — public API
 
 export { createFhirEngine } from './engine.js';
+export { defineConfig, loadFhirConfig } from './config.js';
 export { createConsoleLogger } from './logger.js';
 export { createAdapter } from './adapter-factory.js';
 
 export type {
   FhirEngine,
   FhirEngineConfig,
+  FhirEnginePlugin,
+  EngineContext,
   DatabaseConfig,
   SqliteDatabaseConfig,
   SqliteWasmDatabaseConfig,

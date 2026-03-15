@@ -3,8 +3,9 @@ import { createRuntime, extractSearchValues, extractAllSearchValues, extractRefe
 import { FhirDefinitionBridge, FhirRuntimeProvider, FhirSystem } from 'fhir-persistence';
 
 import { createAdapter } from './adapter-factory.js';
+import { loadFhirConfig } from './config.js';
 import { createConsoleLogger } from './logger.js';
-import type { FhirEngine, FhirEngineConfig } from './types.js';
+import type { EngineContext, FhirEngine, FhirEngineConfig, FhirEnginePlugin } from './types.js';
 
 /**
  * Resolve the SQL dialect from the database config type.
@@ -38,6 +39,30 @@ function validateConfig(config: FhirEngineConfig): void {
 }
 
 /**
+ * Run a lifecycle hook on all plugins in order.
+ * Wraps errors with the plugin name for clear diagnostics.
+ */
+async function runPluginHook(
+  plugins: FhirEnginePlugin[],
+  hook: 'init' | 'start' | 'ready',
+  ctx: EngineContext,
+): Promise<void> {
+  for (const plugin of plugins) {
+    const fn = plugin[hook];
+    if (fn) {
+      try {
+        await fn.call(plugin, ctx);
+      } catch (err) {
+        throw new Error(
+          `fhir-engine: plugin "${plugin.name}" failed during ${hook}: ${err instanceof Error ? err.message : String(err)}`,
+          { cause: err },
+        );
+      }
+    }
+  }
+}
+
+/**
  * Create and bootstrap a fully initialized FHIR engine.
  *
  * This is the single entry point for all FHIR applications.
@@ -59,11 +84,15 @@ function validateConfig(config: FhirEngineConfig): void {
  * await engine.stop();
  * ```
  */
-export async function createFhirEngine(config: FhirEngineConfig): Promise<FhirEngine> {
-  // ── 0. Validate ──────────────────────────────────────────────
+export async function createFhirEngine(config?: FhirEngineConfig): Promise<FhirEngine> {
+  // ── 0. Resolve config ────────────────────────────────────────
+  if (!config) {
+    config = await loadFhirConfig();
+  }
   validateConfig(config);
 
   const logger = config.logger ?? createConsoleLogger();
+  const plugins = config.plugins ?? [];
   logger.info('Initializing fhir-engine...');
 
   // ── 1. Load FHIR definitions ─────────────────────────────────
@@ -88,7 +117,23 @@ export async function createFhirEngine(config: FhirEngineConfig): Promise<FhirEn
   // ── 4. Create storage adapter ───────────────────────────────
   const adapter = createAdapter(config.database, logger);
 
-  // ── 5. Initialize FhirSystem ────────────────────────────────
+  // ── 5. Build EngineContext ──────────────────────────────────
+  const ctx: { -readonly [K in keyof EngineContext]: EngineContext[K] } = {
+    config,
+    definitions: registry,
+    runtime,
+    adapter,
+    persistence: undefined,
+    logger,
+  };
+
+  // ── 6. INIT phase — plugins run before persistence ──────────
+  if (plugins.length > 0) {
+    logger.info(`Running init for ${plugins.length} plugin(s): ${plugins.map((p) => p.name).join(', ')}`);
+    await runPluginHook(plugins, 'init', ctx);
+  }
+
+  // ── 7. Initialize FhirSystem ────────────────────────────────
   const dialect = resolveDialect(config.database.type);
   const system = new FhirSystem(adapter, {
     dialect,
@@ -103,7 +148,22 @@ export async function createFhirEngine(config: FhirEngineConfig): Promise<FhirEn
 
   logger.info(`Persistence ready — IG action: ${igResult.action}, ${resourceTypes.length} resource type(s)`);
 
-  // ── 6. Return FhirEngine ────────────────────────────────────
+  // ctx.persistence now available
+  ctx.persistence = persistence;
+
+  // ── 8. START phase — plugins can access persistence ─────────
+  if (plugins.length > 0) {
+    logger.info(`Running start for ${plugins.length} plugin(s)...`);
+    await runPluginHook(plugins, 'start', ctx);
+  }
+
+  // ── 9. READY phase — system fully operational ───────────────
+  if (plugins.length > 0) {
+    logger.info(`Running ready for ${plugins.length} plugin(s)...`);
+    await runPluginHook(plugins, 'ready', ctx);
+  }
+
+  // ── 10. Return FhirEngine ───────────────────────────────────
   let stopped = false;
 
   const engine: FhirEngine = {
@@ -116,11 +176,27 @@ export async function createFhirEngine(config: FhirEngineConfig): Promise<FhirEn
     igResult,
     resourceTypes,
     logger,
+    context: ctx as EngineContext,
 
     async stop() {
       if (stopped) return;
       stopped = true;
       logger.info('Stopping fhir-engine...');
+
+      // Stop plugins in reverse registration order
+      for (let i = plugins.length - 1; i >= 0; i--) {
+        const plugin = plugins[i];
+        if (plugin.stop) {
+          try {
+            await plugin.stop.call(plugin, ctx as EngineContext);
+          } catch (err) {
+            logger.error(
+              `Plugin "${plugin.name}" failed during stop: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }
+      }
+
       await adapter.close();
       logger.info('fhir-engine stopped.');
     },

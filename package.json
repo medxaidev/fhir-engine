@@ -1,6 +1,6 @@
 {
   "name": "fhir-engine",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "FHIR Engine for healthcare data management",
   "homepage": "https://github.com/medxaidev/fhir-engine#readme",
   "license": "MIT",
@@ -53,7 +53,9 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist",
+    "dist/esm",
+    "dist/cjs",
+    "dist/index.d.ts",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

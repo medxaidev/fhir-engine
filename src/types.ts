@@ -74,6 +74,40 @@ export interface FhirEngineConfig {
   packageVersion?: string;
   /** Logger instance (default: console-based logger). */
   logger?: Logger;
+  /** Plugins to register (executed in registration order). */
+  plugins?: FhirEnginePlugin[];
+}
+
+// ---------------------------------------------------------------------------
+// Plugin system
+// ---------------------------------------------------------------------------
+
+export interface FhirEnginePlugin {
+  /** Unique plugin name (used in logs and error messages). */
+  name: string;
+  /** Called before FhirSystem.initialize(). ctx.persistence is undefined. */
+  init?(ctx: EngineContext): Promise<void>;
+  /** Called after FhirSystem.initialize(). ctx.persistence is available. */
+  start?(ctx: EngineContext): Promise<void>;
+  /** Called after all plugins have started. System is fully operational. */
+  ready?(ctx: EngineContext): Promise<void>;
+  /** Called on shutdown, in reverse registration order. */
+  stop?(ctx: EngineContext): Promise<void>;
+}
+
+export interface EngineContext {
+  /** The resolved engine configuration. */
+  readonly config: FhirEngineConfig;
+  /** DefinitionRegistry from fhir-definition (always available). */
+  readonly definitions: DefinitionRegistry;
+  /** FhirRuntimeInstance from fhir-runtime (always available). */
+  readonly runtime: FhirRuntimeInstance;
+  /** StorageAdapter from fhir-persistence (always available). */
+  readonly adapter: StorageAdapter;
+  /** FhirPersistence facade — undefined during init(), available from start() onward. */
+  readonly persistence: FhirPersistence | undefined;
+  /** Logger instance. */
+  readonly logger: Logger;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +133,8 @@ export interface FhirEngine {
   readonly resourceTypes: string[];
   /** Logger in use. */
   readonly logger: Logger;
+  /** Shared context (same object plugins receive). */
+  readonly context: EngineContext;
   /** Gracefully shut down the engine (closes adapter). */
   stop(): Promise<void>;
 }

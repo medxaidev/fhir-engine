@@ -1,0 +1,24 @@
+# Source
+src/
+
+# Config
+tsconfig.json
+vitest.config.ts
+vitest.setup.ts
+api-extractor.json
+scripts/
+
+# Dev docs
+devdocs/
+
+# Tests & coverage
+coverage/
+*.tgz
+
+# Intermediate tsc output (api-extractor input, not needed at runtime)
+dist/lib/
+dist/tsdoc-metadata.json
+
+# Misc
+.gitignore
+spec/
