@@ -1,6 +1,6 @@
 # fhir-engine — 项目概览
 
-**版本：** 0.4.2
+**版本：** 0.5.0
 **日期：** 2026-03-15
 **层次：** Layer 2 — FHIR 引擎层
 
@@ -227,23 +227,24 @@ npm pack --dry-run
 
 ## 7. 版本历史
 
-| 版本  | 日期       | 关键变更                                                            |
-| ----- | ---------- | ------------------------------------------------------------------- |
-| 0.4.2 | 2026-03-15 | PostgreSQL 支持, fhir-persistence ^0.3.0, sqlite-wasm 移除, 97 测试 |
-| 0.4.1 | 2026-03-15 | 修复缓存包无 root `package.json` 导致 0 资源类型, 96 个测试         |
-| 0.4.0 | 2026-03-15 | `resolvePackages()`, `config.igs` 自动解析, 95 个测试               |
-| 0.3.0 | 2026-03-15 | `engine.search()`, 重新导出搜索/FHIRPath API, 84 个测试             |
-| 0.2.0 | 2026-03-15 | `engine.status()`, 测试套件 73 个, 配置文件系统                     |
-| 0.1.0 | 2026-03-15 | 核心启动, 插件系统, defineConfig, 零参数启动                        |
+| 版本  | 日期       | 关键变更                                                                               |
+| ----- | ---------- | -------------------------------------------------------------------------------------- |
+| 0.5.0 | 2026-03-15 | PG import 修复 (`await import`), igResult.error 检查, fhir-persistence ^0.4.0, 97 测试 |
+| 0.4.2 | 2026-03-15 | PostgreSQL 支持, fhir-persistence ^0.3.0, sqlite-wasm 移除, 97 测试                    |
+| 0.4.1 | 2026-03-15 | 修复缓存包无 root `package.json` 导致 0 资源类型, 96 个测试                            |
+| 0.4.0 | 2026-03-15 | `resolvePackages()`, `config.igs` 自动解析, 95 个测试                                  |
+| 0.3.0 | 2026-03-15 | `engine.search()`, 重新导出搜索/FHIRPath API, 84 个测试                                |
+| 0.2.0 | 2026-03-15 | `engine.status()`, 测试套件 73 个, 配置文件系统                                        |
+| 0.1.0 | 2026-03-15 | 核心启动, 插件系统, defineConfig, 零参数启动                                           |
 
 ---
 
 ## 8. 已知限制
 
-1. ~~**PostgreSQL 不可用**~~ → ✅ 已在 v0.4.2 解决（fhir-persistence v0.3.0 导出 `PostgresAdapter`）
+1. ~~**PostgreSQL 不可用**~~ → ✅ 已在 v0.4.2 解决，v0.5.0 修复了 `require('pg')` 问题
 2. **sqlite-wasm 已移除** — fhir-persistence v0.3.0 不再导出 `SQLiteAdapter`，`database.type = 'sqlite-wasm'` 将抛出错误，请使用 `'sqlite'`
 3. **fhir-runtime 核心 JSON** — `fhir-runtime@0.8.x` 的 npm 包缺少 bundled core definition JSON，引擎自动使用 `preloadCore: false` 绕过
 
 ---
 
-_fhir-engine v0.4.2 — 项目概览_
+_fhir-engine v0.5.0 — 项目概览_

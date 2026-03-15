@@ -1,6 +1,6 @@
 # fhir-engine — API Reference
 
-**版本：** 0.4.2
+**版本：** 0.5.0
 **日期：** 2026-03-15
 **适用对象：** 开发者
 
@@ -431,16 +431,21 @@ function loadFhirConfig(configPath?: string): Promise<FhirEngineConfig>;
 ### createAdapter()
 
 ```typescript
-function createAdapter(config: DatabaseConfig, logger: Logger): StorageAdapter;
+async function createAdapter(
+  config: DatabaseConfig,
+  logger: Logger,
+): Promise<StorageAdapter>;
 ```
+
+> ⚠️ v0.5.0 起 `createAdapter` 为 **async** 函数，调用时需要 `await`。
 
 根据 `config.type` 创建对应的 `StorageAdapter`：
 
-| `config.type`   | 创建的适配器           | 状态                      |
-| --------------- | ---------------------- | ------------------------- |
-| `'sqlite'`      | `BetterSqlite3Adapter` | ✅                        |
-| `'postgres'`    | `PostgresAdapter`      | ✅ (v0.4.2, 需要 `pg` 包) |
-| `'sqlite-wasm'` | —                      | ❌ 已移除，抛异常         |
+| `config.type`   | 创建的适配器           | 状态                                  |
+| --------------- | ---------------------- | ------------------------------------- |
+| `'sqlite'`      | `BetterSqlite3Adapter` | ✅                                    |
+| `'postgres'`    | `PostgresAdapter`      | ✅ (`await import('pg')`, 需 `pg` 包) |
+| `'sqlite-wasm'` | —                      | ❌ 已移除，抛异常                     |
 
 ---
 
@@ -692,4 +697,4 @@ export type { FhirPersistence, StorageAdapter } from "fhir-persistence";
 
 ---
 
-_fhir-engine v0.4.2 — API Reference_
+_fhir-engine v0.5.0 — API Reference_

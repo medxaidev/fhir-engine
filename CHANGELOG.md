@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-15
+
+### Fixed
+
+- **`require('pg')` fails under npm link / esbuild** — `createAdapter()` used synchronous `require('pg')` which resolved from fhir-engine's source location, not the consumer's `node_modules`. Changed to `await import('pg')` with ESM/CJS dual handling (`pg.default?.Pool ?? pg.Pool`). The function signature is now `async createAdapter(): Promise<StorageAdapter>`.
+- **IG migration errors silently swallowed** — `engine.ts` never checked `igResult.error` after `system.initialize()`, so failed PostgreSQL migrations (e.g. `datetime('now')` not supported) would report success. Now throws `fhir-engine: schema migration failed: ...` immediately.
+
+### Changed
+
+- **`fhir-persistence` dependency** — upgraded from `^0.3.0` to `^0.4.0` (PostgreSQL DDL fixes)
+- **`@types/pg` added** as devDependency for TypeScript `await import('pg')` type resolution
+- **`createAdapter()` is now async** — callers must `await` the result (breaking change for direct `createAdapter` consumers; `createFhirEngine` already handles this internally)
+
+---
+
 ## [0.4.2] - 2026-03-15
 
 ### Added

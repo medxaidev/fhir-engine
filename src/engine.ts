@@ -130,7 +130,7 @@ export async function createFhirEngine(config?: FhirEngineConfig): Promise<FhirE
   });
 
   // ── 4. Create storage adapter ───────────────────────────────
-  const adapter = createAdapter(config.database, logger);
+  const adapter = await createAdapter(config.database, logger);
 
   // ── 5. Build EngineContext ──────────────────────────────────
   const ctx: { -readonly [K in keyof EngineContext]: EngineContext[K] } = {
@@ -160,6 +160,13 @@ export async function createFhirEngine(config?: FhirEngineConfig): Promise<FhirE
   logger.info('Initializing persistence system (schema + migration)...');
   const { persistence, sdRegistry, spRegistry, igResult, resourceTypes } =
     await system.initialize(definitionBridge);
+
+  // Fail fast if IG migration had errors (tables not created)
+  if (igResult.error) {
+    throw new Error(
+      `fhir-engine: schema migration failed: ${igResult.error}`,
+    );
+  }
 
   logger.info(`Persistence ready — IG action: ${igResult.action}, ${resourceTypes.length} resource type(s)`);
 

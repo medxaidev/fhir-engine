@@ -10,7 +10,7 @@ import type { DatabaseConfig, Logger } from './types.js';
  * - `sqlite-wasm` → removed in fhir-persistence v0.3.0; use `sqlite` instead
  * - `postgres`    → PostgresAdapter (pg connection pool)
  */
-export function createAdapter(config: DatabaseConfig, logger: Logger): StorageAdapter {
+export async function createAdapter(config: DatabaseConfig, logger: Logger): Promise<StorageAdapter> {
   switch (config.type) {
     case 'sqlite': {
       logger.info(`Creating BetterSqlite3Adapter (path: ${config.path})`);
@@ -30,10 +30,11 @@ export function createAdapter(config: DatabaseConfig, logger: Logger): StorageAd
 
     case 'postgres': {
       logger.info(`Creating PostgresAdapter (url: ${config.url.replace(/\/\/.*@/, '//*****@')})`);
-      // Lazy-import pg to avoid hard dependency when using SQLite only
+      // Dynamic import pg to avoid hard dependency when using SQLite only
       let Pool: any;
       try {
-        Pool = require('pg').Pool;
+        const pg = await import('pg');
+        Pool = pg.default?.Pool ?? pg.Pool;
       } catch {
         throw new Error(
           'fhir-engine: PostgreSQL requires the "pg" package. Install it with: npm install pg',

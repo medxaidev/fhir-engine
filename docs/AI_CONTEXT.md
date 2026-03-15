@@ -1,6 +1,6 @@
 # fhir-engine — AI Context Document
 
-**版本：** 0.4.2
+**版本：** 0.5.0
 **日期：** 2026-03-15
 **适用对象：** AI 编码助手（Copilot、Cascade、Claude 等）
 **用途：** 快速理解 fhir-engine 模块以执行代码任务
@@ -30,7 +30,7 @@
 
 ```
 名称:     fhir-engine
-版本:     0.4.2
+版本:     0.5.0
 层次:     Layer 2 (引擎层)
 职责:     将 Layer 1 的 3 个包组装为可运行的 FHIR 系统
 文件数:   7 个源文件
@@ -61,14 +61,14 @@
 
 ```
 src/
-├── engine.ts           → createFhirEngine() 主函数，~220 行
-│                         启动序列: config → definitions → runtime → adapter
-│                         → plugin init → persistence → plugin start → plugin ready
-│                         → return FhirEngine
+├── engine.ts           → createFhirEngine() 主函数，~260 行
+│                         启动序列: config → definitions → runtime → await adapter
+│                         → plugin init → persistence → igResult.error 检查
+│                         → plugin start → plugin ready → return FhirEngine
 │
-├── adapter-factory.ts  → createAdapter(DatabaseConfig, Logger): StorageAdapter
+├── adapter-factory.ts  → async createAdapter(DatabaseConfig, Logger): Promise<StorageAdapter>
 │                         sqlite → BetterSqlite3Adapter
-│                         postgres → PostgresAdapter (pg.Pool, lazy-import)
+│                         postgres → PostgresAdapter (await import('pg'), ESM 动态导入)
 │                         sqlite-wasm → throw (已移除)
 │
 ├── config.ts           → defineConfig(): identity helper
@@ -399,4 +399,4 @@ export default defineConfig({
 
 ---
 
-_fhir-engine v0.4.2 — AI Context Document_
+_fhir-engine v0.5.0 — AI Context Document_
