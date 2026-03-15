@@ -1,6 +1,6 @@
 # fhir-engine — API Reference
 
-**版本：** 0.2.0
+**版本：** 0.3.0
 **日期：** 2026-03-15
 **适用对象：** 开发者
 
@@ -18,7 +18,9 @@
 8. [Logger](#8-logger)
 9. [配置系统](#9-配置系统)
 10. [适配器工厂](#10-适配器工厂)
-11. [Re-exported 上游类型](#11-re-exported-上游类型)
+11. [搜索 API](#11-搜索-api)
+12. [FHIRPath API](#12-fhirpath-api)
+13. [Re-exported 上游类型](#13-re-exported-上游类型)
 
 ---
 
@@ -27,14 +29,14 @@
 主入口函数。组装 fhir-definition、fhir-runtime、fhir-persistence 为运行系统。
 
 ```typescript
-function createFhirEngine(config?: FhirEngineConfig): Promise<FhirEngine>
+function createFhirEngine(config?: FhirEngineConfig): Promise<FhirEngine>;
 ```
 
 ### 参数
 
-| 参数     | 类型               | 必填 | 说明                                                       |
-|----------|--------------------|----- |------------------------------------------------------------|
-| `config` | `FhirEngineConfig` | 否   | 未提供时自动从 cwd 加载 `fhir.config.{ts,js,mjs,json}`    |
+| 参数     | 类型               | 必填 | 说明                                                   |
+| -------- | ------------------ | ---- | ------------------------------------------------------ |
+| `config` | `FhirEngineConfig` | 否   | 未提供时自动从 cwd 加载 `fhir.config.{ts,js,mjs,json}` |
 
 ### 返回值
 
@@ -42,24 +44,24 @@ function createFhirEngine(config?: FhirEngineConfig): Promise<FhirEngine>
 
 ### 异常
 
-| 异常消息                                          | 触发条件                    |
-|---------------------------------------------------|-----------------------------|
-| `fhir-engine: config.database is required`        | `config.database` 未提供    |
-| `fhir-engine: config.database.type is required`   | `config.database.type` 未提供 |
-| `fhir-engine: config.packages is required`        | `config.packages` 未提供    |
-| `fhir-engine: config.packages.path is required`   | `config.packages.path` 未提供 |
-| `fhir-engine: PostgreSQL adapter is not yet available...` | `database.type = 'postgres'` |
-| `fhir-engine: plugin "X" failed during Y: ...`    | 插件钩子抛出异常            |
+| 异常消息                                                  | 触发条件                      |
+| --------------------------------------------------------- | ----------------------------- |
+| `fhir-engine: config.database is required`                | `config.database` 未提供      |
+| `fhir-engine: config.database.type is required`           | `config.database.type` 未提供 |
+| `fhir-engine: config.packages is required`                | `config.packages` 未提供      |
+| `fhir-engine: config.packages.path is required`           | `config.packages.path` 未提供 |
+| `fhir-engine: PostgreSQL adapter is not yet available...` | `database.type = 'postgres'`  |
+| `fhir-engine: plugin "X" failed during Y: ...`            | 插件钩子抛出异常              |
 
 ### 示例
 
 ```typescript
-import { createFhirEngine } from 'fhir-engine';
+import { createFhirEngine } from "fhir-engine";
 
 // 显式配置
 const engine = await createFhirEngine({
-  database: { type: 'sqlite', path: ':memory:' },
-  packages: { path: './fhir-packages' },
+  database: { type: "sqlite", path: ":memory:" },
+  packages: { path: "./fhir-packages" },
 });
 
 // 零参数 — 自动加载配置文件
@@ -80,10 +82,15 @@ interface FhirEngine {
   readonly adapter: StorageAdapter;
   readonly sdRegistry: StructureDefinitionRegistry;
   readonly spRegistry: SearchParameterRegistry;
-  readonly igResult: { action: 'new' | 'upgrade' | 'consistent' };
+  readonly igResult: { action: "new" | "upgrade" | "consistent" };
   readonly resourceTypes: string[];
   readonly logger: Logger;
   readonly context: EngineContext;
+  search(
+    resourceType: string,
+    queryParams: Record<string, string | string[] | undefined>,
+    options?: SearchOptions,
+  ): Promise<SearchResult>;
   status(): FhirEngineStatus;
   stop(): Promise<void>;
 }
@@ -91,20 +98,44 @@ interface FhirEngine {
 
 ### 属性
 
-| 属性            | 类型                          | 说明                                           |
-|-----------------|-------------------------------|------------------------------------------------|
-| `definitions`   | `DefinitionRegistry`          | FHIR 定义注册表（SD、SP、VS、CS）             |
-| `runtime`       | `FhirRuntimeInstance`         | FHIRPath 求值、验证、搜索值提取               |
-| `persistence`   | `FhirPersistence`             | CRUD + 搜索 + 索引 + Bundle 处理              |
-| `adapter`       | `StorageAdapter`              | 底层数据库适配器                               |
-| `sdRegistry`    | `StructureDefinitionRegistry` | 已加载的 StructureDefinition 注册表            |
-| `spRegistry`    | `SearchParameterRegistry`     | 已加载的 SearchParameter 注册表                |
+| 属性            | 类型                          | 说明                                              |
+| --------------- | ----------------------------- | ------------------------------------------------- |
+| `definitions`   | `DefinitionRegistry`          | FHIR 定义注册表（SD、SP、VS、CS）                 |
+| `runtime`       | `FhirRuntimeInstance`         | FHIRPath 求值、验证、搜索值提取                   |
+| `persistence`   | `FhirPersistence`             | CRUD + 搜索 + 索引 + Bundle 处理                  |
+| `adapter`       | `StorageAdapter`              | 底层数据库适配器                                  |
+| `sdRegistry`    | `StructureDefinitionRegistry` | 已加载的 StructureDefinition 注册表               |
+| `spRegistry`    | `SearchParameterRegistry`     | 已加载的 SearchParameter 注册表                   |
 | `igResult`      | `{ action: ... }`             | IG 初始化结果（`new` / `upgrade` / `consistent`） |
-| `resourceTypes` | `string[]`                    | 有数据库表的资源类型列表                       |
-| `logger`        | `Logger`                      | 当前使用的日志器                               |
-| `context`       | `EngineContext`               | 共享上下文（与插件相同的对象）                 |
+| `resourceTypes` | `string[]`                    | 有数据库表的资源类型列表                          |
+| `logger`        | `Logger`                      | 当前使用的日志器                                  |
+| `context`       | `EngineContext`               | 共享上下文（与插件相同的对象）                    |
 
 ### 方法
+
+#### `search(resourceType, queryParams, options?): Promise<SearchResult>`
+
+高层 FHIR 搜索方法 — 解析查询参数并执行搜索。
+
+**参数：**
+
+| 参数           | 类型                                              | 必填 | 说明                                   |
+| -------------- | ------------------------------------------------- | ---- | -------------------------------------- |
+| `resourceType` | `string`                                          | ✅   | FHIR 资源类型（如 `'Patient'`）        |
+| `queryParams`  | `Record<string, string \| string[] \| undefined>` | ✅   | URL 查询参数对象                       |
+| `options`      | `SearchOptions`                                   | 否   | 搜索选项（如 `{ total: 'accurate' }`） |
+
+**返回值：** `Promise<SearchResult>` — 包含匹配资源、included 资源和可选的 total 计数。
+
+**示例：**
+
+```typescript
+const result = await engine.search("Patient", { name: "Smith", _count: "10" });
+console.log(result.resources); // PersistedResource[]
+console.log(result.total); // number (if options.total = 'accurate')
+```
+
+详见 [§11 搜索 API](#11-搜索-api)。
 
 #### `status(): FhirEngineStatus`
 
@@ -112,14 +143,15 @@ interface FhirEngine {
 
 ```typescript
 const s = engine.status();
-console.log(s.fhirVersions);    // ['4.0']
-console.log(s.loadedPackages);  // ['hl7.fhir.r4.core@4.0.1']
-console.log(s.databaseType);    // 'sqlite'
+console.log(s.fhirVersions); // ['4.0']
+console.log(s.loadedPackages); // ['hl7.fhir.r4.core@4.0.1']
+console.log(s.databaseType); // 'sqlite'
 ```
 
 #### `stop(): Promise<void>`
 
 优雅关闭引擎：
+
 1. 按逆序调用所有插件的 `stop()` 钩子
 2. 关闭数据库适配器
 
@@ -141,22 +173,22 @@ interface FhirEngineStatus {
   fhirVersions: string[];
   loadedPackages: string[];
   resourceTypes: string[];
-  databaseType: 'sqlite' | 'sqlite-wasm' | 'postgres';
-  igAction: 'new' | 'upgrade' | 'consistent';
+  databaseType: "sqlite" | "sqlite-wasm" | "postgres";
+  igAction: "new" | "upgrade" | "consistent";
   startedAt: Date;
   plugins: string[];
 }
 ```
 
-| 字段             | 类型       | 示例                                | 说明                       |
-|------------------|------------|-------------------------------------|----------------------------|
-| `fhirVersions`   | `string[]` | `['4.0']`                           | 从包名推导的 FHIR 版本    |
-| `loadedPackages`  | `string[]` | `['hl7.fhir.r4.core@4.0.1']`       | 已加载的包标识符           |
-| `resourceTypes`  | `string[]` | `['Patient', 'Observation']`        | 有数据库表的资源类型       |
-| `databaseType`   | `string`   | `'sqlite'`                          | 使用的数据库适配器类型     |
-| `igAction`       | `string`   | `'new'`                             | 启动时的 IG 迁移动作       |
-| `startedAt`      | `Date`     | `2026-03-15T10:00:00Z`              | 引擎完成启动的时间戳       |
-| `plugins`        | `string[]` | `['my-plugin']`                     | 已注册的插件名称           |
+| 字段             | 类型       | 示例                         | 说明                   |
+| ---------------- | ---------- | ---------------------------- | ---------------------- |
+| `fhirVersions`   | `string[]` | `['4.0']`                    | 从包名推导的 FHIR 版本 |
+| `loadedPackages` | `string[]` | `['hl7.fhir.r4.core@4.0.1']` | 已加载的包标识符       |
+| `resourceTypes`  | `string[]` | `['Patient', 'Observation']` | 有数据库表的资源类型   |
+| `databaseType`   | `string`   | `'sqlite'`                   | 使用的数据库适配器类型 |
+| `igAction`       | `string`   | `'new'`                      | 启动时的 IG 迁移动作   |
+| `startedAt`      | `Date`     | `2026-03-15T10:00:00Z`       | 引擎完成启动的时间戳   |
+| `plugins`        | `string[]` | `['my-plugin']`              | 已注册的插件名称       |
 
 ---
 
@@ -175,20 +207,20 @@ interface FhirEngineConfig {
 }
 ```
 
-| 字段             | 类型                  | 必填 | 默认值                     | 说明                        |
-|------------------|-----------------------|------|----------------------------|-----------------------------|
-| `database`       | `DatabaseConfig`      | ✅   | —                          | 数据库连接配置              |
-| `packages`       | `PackagesConfig`      | ✅   | —                          | FHIR 包目录配置             |
-| `packageName`    | `string`              | 否   | `'fhir-engine.default'`   | IG 迁移标签                 |
-| `packageVersion` | `string`              | 否   | `'1.0.0'`                 | IG 迁移版本                 |
-| `logger`         | `Logger`              | 否   | `createConsoleLogger()`   | 自定义日志器                |
-| `plugins`        | `FhirEnginePlugin[]`  | 否   | `[]`                      | 插件列表                    |
+| 字段             | 类型                 | 必填 | 默认值                  | 说明            |
+| ---------------- | -------------------- | ---- | ----------------------- | --------------- |
+| `database`       | `DatabaseConfig`     | ✅   | —                       | 数据库连接配置  |
+| `packages`       | `PackagesConfig`     | ✅   | —                       | FHIR 包目录配置 |
+| `packageName`    | `string`             | 否   | `'fhir-engine.default'` | IG 迁移标签     |
+| `packageVersion` | `string`             | 否   | `'1.0.0'`               | IG 迁移版本     |
+| `logger`         | `Logger`             | 否   | `createConsoleLogger()` | 自定义日志器    |
+| `plugins`        | `FhirEnginePlugin[]` | 否   | `[]`                    | 插件列表        |
 
 ### PackagesConfig
 
 ```typescript
 interface PackagesConfig {
-  path: string;  // FHIR 包所在目录
+  path: string; // FHIR 包所在目录
 }
 ```
 
@@ -209,10 +241,10 @@ type DatabaseConfig =
 
 ```typescript
 interface SqliteDatabaseConfig {
-  type: 'sqlite';
-  path: string;           // 文件路径或 ':memory:'
-  wal?: boolean;          // WAL 模式（默认 true）
-  busyTimeout?: number;   // 忙超时毫秒数（默认 5000）
+  type: "sqlite";
+  path: string; // 文件路径或 ':memory:'
+  wal?: boolean; // WAL 模式（默认 true）
+  busyTimeout?: number; // 忙超时毫秒数（默认 5000）
 }
 ```
 
@@ -220,8 +252,8 @@ interface SqliteDatabaseConfig {
 
 ```typescript
 interface SqliteWasmDatabaseConfig {
-  type: 'sqlite-wasm';
-  path: string;           // 文件路径或 ':memory:'
+  type: "sqlite-wasm";
+  path: string; // 文件路径或 ':memory:'
 }
 ```
 
@@ -229,8 +261,8 @@ interface SqliteWasmDatabaseConfig {
 
 ```typescript
 interface PostgresDatabaseConfig {
-  type: 'postgres';
-  url: string;            // PostgreSQL 连接字符串
+  type: "postgres";
+  url: string; // PostgreSQL 连接字符串
 }
 ```
 
@@ -254,21 +286,21 @@ interface FhirEnginePlugin {
 
 ### 钩子执行规则
 
-| 钩子    | 执行时机                 | 执行顺序       | 失败行为                      |
-|---------|--------------------------|----------------|-------------------------------|
-| `init`  | 持久化初始化之前         | 注册顺序       | 抛异常 → 中止启动             |
-| `start` | 持久化初始化之后         | 注册顺序       | 抛异常 → 中止启动             |
-| `ready` | 所有插件 start 完成后    | 注册顺序       | 抛异常 → 中止启动             |
-| `stop`  | 引擎关闭时               | **逆注册顺序** | 记录错误日志 → 继续关闭其他   |
+| 钩子    | 执行时机              | 执行顺序       | 失败行为                    |
+| ------- | --------------------- | -------------- | --------------------------- |
+| `init`  | 持久化初始化之前      | 注册顺序       | 抛异常 → 中止启动           |
+| `start` | 持久化初始化之后      | 注册顺序       | 抛异常 → 中止启动           |
+| `ready` | 所有插件 start 完成后 | 注册顺序       | 抛异常 → 中止启动           |
+| `stop`  | 引擎关闭时            | **逆注册顺序** | 记录错误日志 → 继续关闭其他 |
 
 ### 示例
 
 ```typescript
 const metricsPlugin: FhirEnginePlugin = {
-  name: 'metrics',
+  name: "metrics",
   async start(ctx) {
     // 持久化已就绪，可以查询数据库
-    const count = await ctx.persistence!.readResource('Patient', 'count');
+    const count = await ctx.persistence!.readResource("Patient", "count");
   },
   async stop(ctx) {
     // 清理资源
@@ -294,7 +326,7 @@ interface EngineContext {
 ```
 
 | 字段          | `init` 阶段 | `start` / `ready` / `stop` 阶段 |
-|---------------|-------------|----------------------------------|
+| ------------- | ----------- | ------------------------------- |
 | `config`      | ✅ 可用     | ✅ 可用                         |
 | `definitions` | ✅ 可用     | ✅ 可用                         |
 | `runtime`     | ✅ 可用     | ✅ 可用                         |
@@ -320,7 +352,7 @@ interface Logger {
 ### createConsoleLogger()
 
 ```typescript
-function createConsoleLogger(): Logger
+function createConsoleLogger(): Logger;
 ```
 
 返回默认的控制台日志器，输出格式为 `[fhir-engine] message`。
@@ -334,40 +366,40 @@ function createConsoleLogger(): Logger
 ### defineConfig()
 
 ```typescript
-function defineConfig(config: FhirEngineConfig): FhirEngineConfig
+function defineConfig(config: FhirEngineConfig): FhirEngineConfig;
 ```
 
 类型安全的 identity 辅助函数，用于 `fhir.config.ts`：
 
 ```typescript
 // fhir.config.ts
-import { defineConfig } from 'fhir-engine';
+import { defineConfig } from "fhir-engine";
 
 export default defineConfig({
-  database: { type: 'sqlite', path: './fhir.db' },
-  packages: { path: './fhir-packages' },
+  database: { type: "sqlite", path: "./fhir.db" },
+  packages: { path: "./fhir-packages" },
 });
 ```
 
 ### loadFhirConfig()
 
 ```typescript
-function loadFhirConfig(configPath?: string): Promise<FhirEngineConfig>
+function loadFhirConfig(configPath?: string): Promise<FhirEngineConfig>;
 ```
 
-| 参数         | 类型     | 说明                                     |
-|--------------|----------|------------------------------------------|
-| `configPath` | `string` | 可选。未提供时从 cwd 自动发现配置文件    |
+| 参数         | 类型     | 说明                                  |
+| ------------ | -------- | ------------------------------------- |
+| `configPath` | `string` | 可选。未提供时从 cwd 自动发现配置文件 |
 
 **自动发现顺序：** `fhir.config.ts` → `fhir.config.js` → `fhir.config.mjs` → `fhir.config.json`
 
 **环境变量覆盖：** 加载后自动应用。
 
-| 环境变量            | 覆盖目标                     | 合法值                              |
-|---------------------|------------------------------|-------------------------------------|
-| `FHIR_DATABASE_TYPE`| `config.database.type`       | `sqlite`, `sqlite-wasm`, `postgres` |
-| `FHIR_DATABASE_URL` | `config.database.path`/`.url`| 任意字符串                          |
-| `FHIR_PACKAGES_PATH`| `config.packages.path`       | 任意路径                            |
+| 环境变量             | 覆盖目标                      | 合法值                              |
+| -------------------- | ----------------------------- | ----------------------------------- |
+| `FHIR_DATABASE_TYPE` | `config.database.type`        | `sqlite`, `sqlite-wasm`, `postgres` |
+| `FHIR_DATABASE_URL`  | `config.database.path`/`.url` | 任意字符串                          |
+| `FHIR_PACKAGES_PATH` | `config.packages.path`        | 任意路径                            |
 
 ---
 
@@ -376,37 +408,188 @@ function loadFhirConfig(configPath?: string): Promise<FhirEngineConfig>
 ### createAdapter()
 
 ```typescript
-function createAdapter(
-  config: DatabaseConfig,
-  logger: Logger,
-): StorageAdapter
+function createAdapter(config: DatabaseConfig, logger: Logger): StorageAdapter;
 ```
 
 根据 `config.type` 创建对应的 `StorageAdapter`：
 
-| `config.type`  | 创建的适配器           | 状态   |
-|----------------|------------------------|--------|
-| `'sqlite'`     | `BetterSqlite3Adapter` | ✅     |
-| `'sqlite-wasm'`| `SQLiteAdapter`        | ✅     |
-| `'postgres'`   | —                      | ❌ 抛异常 |
+| `config.type`   | 创建的适配器           | 状态      |
+| --------------- | ---------------------- | --------- |
+| `'sqlite'`      | `BetterSqlite3Adapter` | ✅        |
+| `'sqlite-wasm'` | `SQLiteAdapter`        | ✅        |
+| `'postgres'`    | —                      | ❌ 抛异常 |
 
 ---
 
-## 11. Re-exported 上游类型
+## 11. 搜索 API
+
+### engine.search()
+
+高层搜索方法，已在 [§2 FhirEngine](#2-fhirengine) 中说明。
+
+### parseSearchRequest()
+
+```typescript
+function parseSearchRequest(
+  resourceType: string,
+  queryParams: Record<string, string | string[] | undefined>,
+  registry?: SearchParameterRegistry,
+): SearchRequest;
+```
+
+将 URL 查询参数解析为结构化的 `SearchRequest` 对象。
+
+**示例：**
+
+```typescript
+import { parseSearchRequest } from "fhir-engine";
+
+const request = parseSearchRequest(
+  "Patient",
+  { name: "Smith", _count: "10" },
+  engine.spRegistry,
+);
+// SearchRequest { resourceType: 'Patient', params: [...], count: 10, ... }
+```
+
+### executeSearch()
+
+```typescript
+function executeSearch(
+  adapter: StorageAdapter,
+  request: SearchRequest,
+  registry: SearchParameterRegistry,
+  options?: SearchOptions,
+): Promise<SearchResult>;
+```
+
+执行搜索请求并返回结果。
+
+**示例：**
+
+```typescript
+import { parseSearchRequest, executeSearch } from "fhir-engine";
+
+const request = parseSearchRequest(
+  "Patient",
+  { name: "Smith" },
+  engine.spRegistry,
+);
+const result = await executeSearch(engine.adapter, request, engine.spRegistry);
+console.log(result.resources); // PersistedResource[]
+```
+
+### 类型
+
+```typescript
+export type { SearchRequest, SearchResult, SearchOptions } from "fhir-engine";
+
+interface SearchResult {
+  resources: PersistedResource[];
+  included?: PersistedResource[];
+  total?: number;
+}
+
+interface SearchOptions {
+  total?: "none" | "estimate" | "accurate";
+}
+```
+
+---
+
+## 12. FHIRPath API
+
+所有 FHIRPath 求值函数从 `fhir-runtime` 重新导出：
+
+### evalFhirPath()
+
+```typescript
+function evalFhirPath(expression: string, input: unknown): unknown[];
+```
+
+求值 FHIRPath 表达式，返回结果数组。
+
+**示例：**
+
+```typescript
+import { evalFhirPath } from "fhir-engine";
+
+const patient = {
+  resourceType: "Patient",
+  name: [{ family: "Smith", given: ["John"] }],
+};
+const families = evalFhirPath("Patient.name.family", patient);
+console.log(families); // ['Smith']
+```
+
+### evalFhirPathBoolean()
+
+```typescript
+function evalFhirPathBoolean(expression: string, input: unknown): boolean;
+```
+
+求值 FHIRPath 表达式并返回布尔值。
+
+**示例：**
+
+```typescript
+import { evalFhirPathBoolean } from "fhir-engine";
+
+const patient = { resourceType: "Patient", active: true };
+const isActive = evalFhirPathBoolean("Patient.active", patient);
+console.log(isActive); // true
+```
+
+### evalFhirPathString()
+
+```typescript
+function evalFhirPathString(
+  expression: string,
+  input: unknown,
+): string | undefined;
+```
+
+求值 FHIRPath 表达式并返回第一个结果的字符串值。
+
+**示例：**
+
+```typescript
+import { evalFhirPathString } from "fhir-engine";
+
+const patient = { resourceType: "Patient", name: [{ family: "Smith" }] };
+const family = evalFhirPathString("Patient.name.family", patient);
+console.log(family); // 'Smith'
+```
+
+### evalFhirPathTyped()
+
+```typescript
+function evalFhirPathTyped(
+  expression: string,
+  input: TypedValue[],
+  variables?: Record<string, TypedValue>,
+): TypedValue[];
+```
+
+带类型信息的 FHIRPath 求值（高级用法）。
+
+---
+
+## 13. Re-exported 上游类型
 
 以下类型从上游包 re-export，方便消费方直接从 `fhir-engine` 导入：
 
 ```typescript
 // from fhir-definition
-export type { DefinitionRegistry, DefinitionProvider } from 'fhir-definition';
+export type { DefinitionRegistry, DefinitionProvider } from "fhir-definition";
 
 // from fhir-runtime
-export type { FhirRuntimeInstance } from 'fhir-runtime';
+export type { FhirRuntimeInstance } from "fhir-runtime";
 
 // from fhir-persistence
-export type { FhirPersistence, StorageAdapter } from 'fhir-persistence';
+export type { FhirPersistence, StorageAdapter } from "fhir-persistence";
 ```
 
 ---
 
-*fhir-engine v0.2.0 — API Reference*
+_fhir-engine v0.3.0 — API Reference_

@@ -1,6 +1,6 @@
 # fhir-engine — 项目概览
 
-**版本：** 0.2.0
+**版本：** 0.3.0
 **日期：** 2026-03-15
 **层次：** Layer 2 — FHIR 引擎层
 
@@ -31,44 +31,75 @@
 
 ## 2. 核心功能
 
-### 2.1 单入口启动
+### 2.1 高层搜索 API
 
 ```typescript
-import { createFhirEngine } from 'fhir-engine';
+// 方式 1：使用 engine.search() 高层方法
+const result = await engine.search("Patient", { name: "Smith", _count: "10" });
+
+// 方式 2：使用重新导出的工具函数
+import { parseSearchRequest, executeSearch } from "fhir-engine";
+const request = parseSearchRequest(
+  "Patient",
+  { name: "Smith" },
+  engine.spRegistry,
+);
+const result = await executeSearch(engine.adapter, request, engine.spRegistry);
+```
+
+### 2.2 FHIRPath 求值
+
+```typescript
+import {
+  evalFhirPath,
+  evalFhirPathBoolean,
+  evalFhirPathString,
+} from "fhir-engine";
+
+const values = evalFhirPath("Patient.name.family", patient); // ['Smith']
+const active = evalFhirPathBoolean("Patient.active", patient); // boolean
+const family = evalFhirPathString("Patient.name.family", patient); // 'Smith'
+```
+
+### 2.3 单入口启动
+
+```typescript
+import { createFhirEngine } from "fhir-engine";
 
 const engine = await createFhirEngine({
-  database: { type: 'sqlite', path: './fhir.db' },
-  packages: { path: './fhir-packages' },
+  database: { type: "sqlite", path: "./fhir.db" },
+  packages: { path: "./fhir-packages" },
 });
 ```
 
 一次调用完成：
+
 - 加载 FHIR 定义包（StructureDefinition、SearchParameter 等）
 - 创建运行时（FHIRPath、验证）
 - 创建存储适配器（SQLite）
 - 执行 Schema 迁移
 - 初始化持久化层（CRUD + 搜索 + 索引）
 
-### 2.2 插件系统
+### 2.4 插件系统
 
 ```typescript
 const engine = await createFhirEngine({
-  database: { type: 'sqlite', path: ':memory:' },
-  packages: { path: './fhir-packages' },
+  database: { type: "sqlite", path: ":memory:" },
+  packages: { path: "./fhir-packages" },
   plugins: [myPlugin],
 });
 ```
 
 四阶段生命周期：`init` → `start` → `ready` → `stop`
 
-| 阶段    | 时机               | `ctx.persistence` |
-|---------|--------------------|--------------------|
-| `init`  | 持久化初始化之前   | `undefined`        |
-| `start` | 持久化初始化之后   | ✅ 可用            |
-| `ready` | 所有插件 start 完成 | ✅ 可用            |
-| `stop`  | 关闭时（逆序执行） | ✅ 可用            |
+| 阶段    | 时机                | `ctx.persistence` |
+| ------- | ------------------- | ----------------- |
+| `init`  | 持久化初始化之前    | `undefined`       |
+| `start` | 持久化初始化之后    | ✅ 可用           |
+| `ready` | 所有插件 start 完成 | ✅ 可用           |
+| `stop`  | 关闭时（逆序执行）  | ✅ 可用           |
 
-### 2.3 配置文件支持
+### 2.5 配置文件支持
 
 ```typescript
 // 零参数启动 — 自动发现 fhir.config.{ts,js,mjs,json}
@@ -76,11 +107,12 @@ const engine = await createFhirEngine();
 ```
 
 支持环境变量覆盖：
+
 - `FHIR_DATABASE_TYPE` → `config.database.type`
 - `FHIR_DATABASE_URL` → `config.database.path` / `.url`
 - `FHIR_PACKAGES_PATH` → `config.packages.path`
 
-### 2.4 引擎状态查询
+### 2.6 引擎状态查询
 
 ```typescript
 const status = engine.status();
@@ -101,17 +133,17 @@ const status = engine.status();
 
 ### 3.1 上游依赖（Layer 1）
 
-| 包                 | 版本   | 提供的功能                         |
-|--------------------|--------|------------------------------------|
-| `fhir-definition`  | 0.5.0  | FHIR 定义加载、注册表查询         |
-| `fhir-runtime`     | 0.8.1  | FHIRPath、验证、搜索值提取         |
-| `fhir-persistence` | 0.1.0  | CRUD、搜索、Schema 迁移、索引     |
+| 包                 | 版本  | 提供的功能                    |
+| ------------------ | ----- | ----------------------------- |
+| `fhir-definition`  | 0.5.0 | FHIR 定义加载、注册表查询     |
+| `fhir-runtime`     | 0.8.1 | FHIRPath、验证、搜索值提取    |
+| `fhir-persistence` | 0.1.0 | CRUD、搜索、Schema 迁移、索引 |
 
 ### 3.2 下游消费方（Layer 3）
 
-| 包            | 使用方式                   | HTTP |
-|---------------|---------------------------|------|
-| `fhir-cli`    | 直接嵌入 `createFhirEngine()` | 无   |
+| 包            | 使用方式                           | HTTP |
+| ------------- | ---------------------------------- | ---- |
+| `fhir-cli`    | 直接嵌入 `createFhirEngine()`      | 无   |
 | `fhir-server` | `createFhirEngine()` + HTTP Router | 有   |
 
 ### 3.3 禁止的依赖
@@ -122,11 +154,11 @@ const status = engine.status();
 
 ## 4. 数据库支持
 
-| 类型          | 适配器                 | 状态                    |
-|---------------|------------------------|-------------------------|
-| `sqlite`      | `BetterSqlite3Adapter` | ✅ 完全可用             |
-| `sqlite-wasm` | `SQLiteAdapter`        | ✅ 存在（低优先级）     |
-| `postgres`    | `PostgresAdapter`      | ❌ 上游阻断（待修复）   |
+| 类型          | 适配器                 | 状态                  |
+| ------------- | ---------------------- | --------------------- |
+| `sqlite`      | `BetterSqlite3Adapter` | ✅ 完全可用           |
+| `sqlite-wasm` | `SQLiteAdapter`        | ✅ 存在（低优先级）   |
+| `postgres`    | `PostgresAdapter`      | ❌ 上游阻断（待修复） |
 
 ---
 
@@ -179,10 +211,11 @@ npm pack --dry-run
 
 ## 7. 版本历史
 
-| 版本  | 日期       | 关键变更                                          |
-|-------|------------|---------------------------------------------------|
-| 0.2.0 | 2026-03-15 | `engine.status()`, 测试套件 73 个, 配置文件系统   |
-| 0.1.0 | 2026-03-15 | 核心启动, 插件系统, defineConfig, 零参数启动      |
+| 版本  | 日期       | 关键变更                                                |
+| ----- | ---------- | ------------------------------------------------------- |
+| 0.3.0 | 2026-03-15 | `engine.search()`, 重新导出搜索/FHIRPath API, 84 个测试 |
+| 0.2.0 | 2026-03-15 | `engine.status()`, 测试套件 73 个, 配置文件系统         |
+| 0.1.0 | 2026-03-15 | 核心启动, 插件系统, defineConfig, 零参数启动            |
 
 ---
 
@@ -193,4 +226,4 @@ npm pack --dry-run
 
 ---
 
-*fhir-engine v0.2.0 — 项目概览*
+_fhir-engine v0.3.0 — 项目概览_
