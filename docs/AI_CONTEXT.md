@@ -1,6 +1,6 @@
 # fhir-engine — AI Context Document
 
-**版本：** 0.5.0
+**版本：** 0.5.1
 **日期：** 2026-03-15
 **适用对象：** AI 编码助手（Copilot、Cascade、Claude 等）
 **用途：** 快速理解 fhir-engine 模块以执行代码任务
@@ -30,7 +30,7 @@
 
 ```
 名称:     fhir-engine
-版本:     0.5.0
+版本:     0.5.1
 层次:     Layer 2 (引擎层)
 职责:     将 Layer 1 的 3 个包组装为可运行的 FHIR 系统
 文件数:   7 个源文件
@@ -399,4 +399,4 @@ export default defineConfig({
 
 ---
 
-_fhir-engine v0.5.0 — AI Context Document_
+_fhir-engine v0.5.1 — AI Context Document_

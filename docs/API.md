@@ -1,6 +1,6 @@
 # fhir-engine — API Reference
 
-**版本：** 0.5.0
+**版本：** 0.5.1
 **日期：** 2026-03-15
 **适用对象：** 开发者
 
@@ -697,4 +697,4 @@ export type { FhirPersistence, StorageAdapter } from "fhir-persistence";
 
 ---
 
-_fhir-engine v0.5.0 — API Reference_
+_fhir-engine v0.5.1 — API Reference_

@@ -280,9 +280,7 @@ Loads config from a file. Auto-discovers `fhir.config.ts` → `.js` → `.mjs` �
 
 ### PostgreSQL Setup
 
-```bash
-npm install pg        # required peer dependency for postgres
-```
+`pg` is included as a direct dependency (v0.5.1+), no separate installation needed.
 
 ```ts
 const engine = await createFhirEngine({
@@ -300,7 +298,6 @@ const engine = await createFhirEngine({
 
 - Node.js >= 18.0.0
 - npm >= 9.0.0
-- `pg` package (only if using PostgreSQL)
 
 ## License
 

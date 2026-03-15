@@ -1,6 +1,6 @@
 {
   "name": "fhir-engine",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "FHIR Engine for healthcare data management",
   "homepage": "https://github.com/medxaidev/fhir-engine#readme",
   "license": "MIT",
@@ -68,8 +68,9 @@
   },
   "dependencies": {
     "fhir-definition": "^0.5.0",
-    "fhir-persistence": "^0.4.0",
-    "fhir-runtime": "^0.8.1"
+    "fhir-persistence": "^0.5.0",
+    "fhir-runtime": "^0.8.1",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.57.7",

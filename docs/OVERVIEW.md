@@ -1,6 +1,6 @@
 # fhir-engine — 项目概览
 
-**版本：** 0.5.0
+**版本：** 0.5.1
 **日期：** 2026-03-15
 **层次：** Layer 2 — FHIR 引擎层
 
@@ -229,6 +229,7 @@ npm pack --dry-run
 
 | 版本  | 日期       | 关键变更                                                                               |
 | ----- | ---------- | -------------------------------------------------------------------------------------- |
+| 0.5.1 | 2026-03-16 | fhir-persistence ^0.5.0, pg 作为直接依赖, 97 测试                                      |
 | 0.5.0 | 2026-03-15 | PG import 修复 (`await import`), igResult.error 检查, fhir-persistence ^0.4.0, 97 测试 |
 | 0.4.2 | 2026-03-15 | PostgreSQL 支持, fhir-persistence ^0.3.0, sqlite-wasm 移除, 97 测试                    |
 | 0.4.1 | 2026-03-15 | 修复缓存包无 root `package.json` 导致 0 资源类型, 96 个测试                            |
@@ -247,4 +248,4 @@ npm pack --dry-run
 
 ---
 
-_fhir-engine v0.5.0 — 项目概览_
+_fhir-engine v0.5.1 — 项目概览_
