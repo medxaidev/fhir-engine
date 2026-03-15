@@ -5,7 +5,7 @@ import { FhirDefinitionBridge, FhirRuntimeProvider, FhirSystem } from 'fhir-pers
 import { createAdapter } from './adapter-factory.js';
 import { loadFhirConfig } from './config.js';
 import { createConsoleLogger } from './logger.js';
-import type { EngineContext, FhirEngine, FhirEngineConfig, FhirEnginePlugin } from './types.js';
+import type { EngineContext, FhirEngine, FhirEngineConfig, FhirEnginePlugin, FhirEngineStatus } from './types.js';
 
 /**
  * Resolve the SQL dialect from the database config type.
@@ -165,6 +165,18 @@ export async function createFhirEngine(config?: FhirEngineConfig): Promise<FhirE
 
   // ── 10. Return FhirEngine ───────────────────────────────────
   let stopped = false;
+  const startedAt = new Date();
+  const loadedPackages = result.packages.map((p) => `${p.name}@${p.version}`);
+  const fhirVersions = [...new Set(
+    result.packages
+      .map((p) => {
+        if (p.name.includes('.r4.')) return '4.0';
+        if (p.name.includes('.r4b.')) return '4.3';
+        if (p.name.includes('.r5.')) return '5.0';
+        return undefined;
+      })
+      .filter(Boolean),
+  )] as string[];
 
   const engine: FhirEngine = {
     definitions: registry,
@@ -177,6 +189,18 @@ export async function createFhirEngine(config?: FhirEngineConfig): Promise<FhirE
     resourceTypes,
     logger,
     context: ctx as EngineContext,
+
+    status(): FhirEngineStatus {
+      return {
+        fhirVersions,
+        loadedPackages,
+        resourceTypes,
+        databaseType: config.database.type,
+        igAction: igResult.action,
+        startedAt,
+        plugins: plugins.map((p) => p.name),
+      };
+    },
 
     async stop() {
       if (stopped) return;

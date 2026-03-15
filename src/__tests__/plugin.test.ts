@@ -140,7 +140,7 @@ describe('Plugin System', () => {
     expect(engine.context.config).toBeDefined();
   });
 
-  // ── Error handling ─────────────────────────────────────────────
+  // ── Plugin init() failure (5 tests) ──────────────────────────────
 
   it('plugin throwing in init() aborts engine startup', async () => {
     const plugin: FhirEnginePlugin = {
@@ -155,6 +155,62 @@ describe('Plugin System', () => {
     ).rejects.toThrow('plugin "bad-init" failed during init: init failed');
   });
 
+  it('init() error message includes plugin name', async () => {
+    const plugin: FhirEnginePlugin = {
+      name: 'my-failing-plugin',
+      async init() { throw new Error('oops'); },
+    };
+
+    await expect(
+      createFhirEngine(baseConfig({ plugins: [plugin], logger: silent })),
+    ).rejects.toThrow('my-failing-plugin');
+  });
+
+  it('init() error preserves original cause', async () => {
+    const originalError = new Error('root cause');
+    const plugin: FhirEnginePlugin = {
+      name: 'cause-plugin',
+      async init() { throw originalError; },
+    };
+
+    try {
+      await createFhirEngine(baseConfig({ plugins: [plugin], logger: silent }));
+    } catch (err: any) {
+      expect(err.cause).toBe(originalError);
+    }
+  });
+
+  it('first plugin init() failure prevents second plugin from running', async () => {
+    const calls: string[] = [];
+    const pluginA: FhirEnginePlugin = {
+      name: 'a-fail',
+      async init() { calls.push('a:init'); throw new Error('fail'); },
+    };
+    const pluginB: FhirEnginePlugin = {
+      name: 'b-ok',
+      async init() { calls.push('b:init'); },
+    };
+
+    await expect(
+      createFhirEngine(baseConfig({ plugins: [pluginA, pluginB], logger: silent })),
+    ).rejects.toThrow();
+
+    expect(calls).toEqual(['a:init']); // b never ran
+  });
+
+  it('init() failure with non-Error value is stringified', async () => {
+    const plugin: FhirEnginePlugin = {
+      name: 'string-throw',
+      async init() { throw 'raw string error'; },
+    };
+
+    await expect(
+      createFhirEngine(baseConfig({ plugins: [plugin], logger: silent })),
+    ).rejects.toThrow('raw string error');
+  });
+
+  // ── Plugin start() failure (5 tests) ────────────────────────────
+
   it('plugin throwing in start() aborts engine startup', async () => {
     const plugin: FhirEnginePlugin = {
       name: 'bad-start',
@@ -166,6 +222,49 @@ describe('Plugin System', () => {
     await expect(
       createFhirEngine(baseConfig({ plugins: [plugin], logger: silent })),
     ).rejects.toThrow('plugin "bad-start" failed during start: start failed');
+  });
+
+  it('start() error includes plugin name and phase', async () => {
+    const plugin: FhirEnginePlugin = {
+      name: 'start-err',
+      async start() { throw new Error('db unavailable'); },
+    };
+
+    await expect(
+      createFhirEngine(baseConfig({ plugins: [plugin], logger: silent })),
+    ).rejects.toThrow(/start-err.*start/);
+  });
+
+  it('start() failure preserves original cause', async () => {
+    const cause = new Error('original');
+    const plugin: FhirEnginePlugin = {
+      name: 'start-cause',
+      async start() { throw cause; },
+    };
+
+    try {
+      await createFhirEngine(baseConfig({ plugins: [plugin], logger: silent }));
+    } catch (err: any) {
+      expect(err.cause).toBe(cause);
+    }
+  });
+
+  it('first plugin start() failure prevents second plugin start()', async () => {
+    const calls: string[] = [];
+    const pluginA: FhirEnginePlugin = {
+      name: 'a-start-fail',
+      async start() { calls.push('a:start'); throw new Error('fail'); },
+    };
+    const pluginB: FhirEnginePlugin = {
+      name: 'b-start-ok',
+      async start() { calls.push('b:start'); },
+    };
+
+    await expect(
+      createFhirEngine(baseConfig({ plugins: [pluginA, pluginB], logger: silent })),
+    ).rejects.toThrow();
+
+    expect(calls).toEqual(['a:start']);
   });
 
   it('plugin throwing in ready() aborts engine startup', async () => {
@@ -180,6 +279,8 @@ describe('Plugin System', () => {
       createFhirEngine(baseConfig({ plugins: [plugin], logger: silent })),
     ).rejects.toThrow('plugin "bad-ready" failed during ready: ready failed');
   });
+
+  // ── Plugin stop() reverse order & error isolation (5 tests) ─────
 
   it('plugin throwing in stop() logs error but does not prevent other plugins from stopping', async () => {
     const calls: string[] = [];
@@ -214,10 +315,67 @@ describe('Plugin System', () => {
     await engine.stop();
     engine = undefined;
 
-    // All three plugins' stop() called (reverse order)
     expect(calls).toEqual(['c:stop', 'b:stop', 'a:stop']);
-    // Error from pluginB was logged
     expect(errors.some((e) => e.includes('b-stop-fail') && e.includes('stop exploded'))).toBe(true);
+  });
+
+  it('stop() with 4 plugins calls all in reverse order', async () => {
+    const calls: string[] = [];
+    const plugins: FhirEnginePlugin[] = ['w', 'x', 'y', 'z'].map((n) => ({
+      name: n,
+      async stop() { calls.push(`${n}:stop`); },
+    }));
+
+    engine = await createFhirEngine(baseConfig({ plugins, logger: silent }));
+    await engine.stop();
+    engine = undefined;
+
+    expect(calls).toEqual(['z:stop', 'y:stop', 'x:stop', 'w:stop']);
+  });
+
+  it('multiple stop() errors are each logged independently', async () => {
+    const errors: string[] = [];
+
+    const pluginA: FhirEnginePlugin = {
+      name: 'fail-1',
+      async stop() { throw new Error('err-1'); },
+    };
+    const pluginB: FhirEnginePlugin = {
+      name: 'fail-2',
+      async stop() { throw new Error('err-2'); },
+    };
+
+    const errorLogger = { ...silent, error: (msg: string) => errors.push(msg) };
+
+    engine = await createFhirEngine(baseConfig({
+      plugins: [pluginA, pluginB],
+      logger: errorLogger,
+    }));
+    await engine.stop();
+    engine = undefined;
+
+    expect(errors.some((e) => e.includes('fail-1'))).toBe(true);
+    expect(errors.some((e) => e.includes('fail-2'))).toBe(true);
+  });
+
+  it('single plugin stop() is called in reverse order (trivially)', async () => {
+    const calls: string[] = [];
+
+    engine = await createFhirEngine(baseConfig({
+      plugins: [{ name: 'solo', async stop() { calls.push('solo:stop'); } }],
+      logger: silent,
+    }));
+    await engine.stop();
+    engine = undefined;
+
+    expect(calls).toEqual(['solo:stop']);
+  });
+
+  it('stop() without any plugins succeeds', async () => {
+    engine = await createFhirEngine(baseConfig({ plugins: [], logger: silent }));
+    await engine.stop();
+    engine = undefined;
+    expect(true).toBe(true);
   });
 
   // ── Partial hooks ──────────────────────────────────────────────

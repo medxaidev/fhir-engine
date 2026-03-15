@@ -8,4 +8,4 @@ spec/us-core/
 
 *.tgz
 
-devdocs/
+# devdocs/

@@ -111,6 +111,27 @@ export interface EngineContext {
 }
 
 // ---------------------------------------------------------------------------
+// Engine status
+// ---------------------------------------------------------------------------
+
+export interface FhirEngineStatus {
+  /** FHIR versions loaded (e.g. ['4.0.1']). */
+  fhirVersions: string[];
+  /** Loaded package identifiers (e.g. ['hl7.fhir.r4.core@4.0.1']). */
+  loadedPackages: string[];
+  /** Resource types with database tables. */
+  resourceTypes: string[];
+  /** Database adapter type in use. */
+  databaseType: 'sqlite' | 'sqlite-wasm' | 'postgres';
+  /** IG migration action performed at startup. */
+  igAction: 'new' | 'upgrade' | 'consistent';
+  /** Timestamp when the engine finished bootstrapping. */
+  startedAt: Date;
+  /** Registered plugin names. */
+  plugins: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Engine result
 // ---------------------------------------------------------------------------
 
@@ -135,6 +156,8 @@ export interface FhirEngine {
   readonly logger: Logger;
   /** Shared context (same object plugins receive). */
   readonly context: EngineContext;
+  /** Return engine health/status information. */
+  status(): FhirEngineStatus;
   /** Gracefully shut down the engine (closes adapter). */
   stop(): Promise<void>;
 }

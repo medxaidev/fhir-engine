@@ -1,6 +1,6 @@
 {
   "name": "fhir-engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "FHIR Engine for healthcare data management",
   "homepage": "https://github.com/medxaidev/fhir-engine#readme",
   "license": "MIT",

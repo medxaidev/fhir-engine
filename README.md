@@ -157,6 +157,7 @@ Creates and bootstraps a fully initialized FHIR engine.
 | `resourceTypes` | `string[]`                    | Resource types with database tables            |
 | `context`       | `EngineContext`               | Shared context (same object plugins receive)   |
 | `logger`        | `Logger`                      | Logger instance                                |
+| `status()`      | `() => FhirEngineStatus`      | Engine health and status information           |
 | `stop()`        | `() => Promise<void>`         | Gracefully shut down the engine                |
 
 ### `FhirEngineConfig`
@@ -169,6 +170,22 @@ interface FhirEngineConfig {
   packageVersion?: string; // IG migration version
   logger?: Logger; // custom logger (default: console)
   plugins?: FhirEnginePlugin[]; // plugins array
+}
+```
+
+### `FhirEngineStatus`
+
+Returned by `engine.status()`:
+
+```ts
+interface FhirEngineStatus {
+  fhirVersions: string[]; // e.g. ['4.0']
+  loadedPackages: string[]; // e.g. ['hl7.fhir.r4.core@4.0.1']
+  resourceTypes: string[]; // e.g. ['Patient', 'Observation', ...]
+  databaseType: "sqlite" | "sqlite-wasm" | "postgres";
+  igAction: "new" | "upgrade" | "consistent";
+  startedAt: Date;
+  plugins: string[]; // registered plugin names
 }
 ```
 

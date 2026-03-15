@@ -9,6 +9,7 @@ export type {
   FhirEngine,
   FhirEngineConfig,
   FhirEnginePlugin,
+  FhirEngineStatus,
   EngineContext,
   DatabaseConfig,
   SqliteDatabaseConfig,
