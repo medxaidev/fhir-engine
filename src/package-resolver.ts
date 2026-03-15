@@ -1,5 +1,5 @@
 import { resolve, join } from 'node:path';
-import { existsSync, mkdirSync, symlinkSync, readFileSync, lstatSync } from 'node:fs';
+import { existsSync, mkdirSync, symlinkSync, readFileSync, lstatSync, copyFileSync } from 'node:fs';
 import { PackageCache, PackageRegistryClient } from 'fhir-definition';
 
 import type { FhirEngineConfig, ResolvePackagesOptions, ResolvedPackage, ResolvePackagesResult, Logger } from './types.js';
@@ -107,6 +107,7 @@ export async function resolvePackages(
       if (cachePath) {
         // Cache hit — create symlink
         logger?.info(`Found ${ig.name}@${version} in system cache, linking...`);
+        ensureCacheRootManifest(cachePath);
         createLink(cachePath, localPath);
         results.push({ name: ig.name, version, path: localPath, source: 'cache' });
         continue;
@@ -132,6 +133,7 @@ export async function resolvePackages(
         errors.push({ name: ig.name, error: `Failed to locate cached package after download` });
         continue;
       }
+      ensureCacheRootManifest(newCachePath);
       createLink(newCachePath, localPath);
       results.push({ name: ig.name, version, path: localPath, source: 'download' });
     } catch (err) {
@@ -147,6 +149,21 @@ export async function resolvePackages(
     packages: results,
     errors,
   };
+}
+
+/**
+ * Ensure the cache root directory has a package.json manifest.
+ * Some tools (e.g. Firely Terminal) only place package.json inside the
+ * package/ subdirectory. Without a root manifest, PackageScanner discovers
+ * the package at the wrong depth, causing PackageLoader to construct a
+ * double-nested "package/package" path that doesn't exist (→ 0 resources).
+ */
+function ensureCacheRootManifest(cachePath: string): void {
+  const rootManifest = join(cachePath, 'package.json');
+  const nestedManifest = join(cachePath, 'package', 'package.json');
+  if (!existsSync(rootManifest) && existsSync(nestedManifest)) {
+    copyFileSync(nestedManifest, rootManifest);
+  }
 }
 
 /**

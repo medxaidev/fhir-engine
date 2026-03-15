@@ -1,6 +1,6 @@
 # fhir-engine — AI Context Document
 
-**版本：** 0.4.0
+**版本：** 0.4.1
 **日期：** 2026-03-15
 **适用对象：** AI 编码助手（Copilot、Cascade、Claude 等）
 **用途：** 快速理解 fhir-engine 模块以执行代码任务
@@ -30,11 +30,11 @@
 
 ```
 名称:     fhir-engine
-版本:     0.4.0
+版本:     0.4.1
 层次:     Layer 2 (引擎层)
 职责:     将 Layer 1 的 3 个包组装为可运行的 FHIR 系统
 文件数:   7 个源文件
-测试数:   95 个
+测试数:   96 个
 构建输出: ESM (.mjs) + CJS (.cjs) + bundled .d.ts
 ```
 
@@ -93,7 +93,7 @@ src/
     ├── engine.test.ts          → 45 tests: config, bootstrap, CRUD, stop, status, search, re-exports
     ├── plugin.test.ts          → 28 tests: lifecycle, context, init/start/stop failures
     ├── config.test.ts          → 11 tests: defineConfig, loadFhirConfig, env overrides
-    └── package-resolver.test.ts → 11 tests: local, cache, offline, idempotent, overrides
+    └── package-resolver.test.ts → 12 tests: local, cache, offline, idempotent, overrides, Firely cache fix
 ```
 
 ---
@@ -399,4 +399,4 @@ export default defineConfig({
 
 ---
 
-_fhir-engine v0.4.0 — AI Context Document_
+_fhir-engine v0.4.1 — AI Context Document_

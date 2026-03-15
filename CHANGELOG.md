@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-03-15
+
+### Fixed
+
+- **`resolvePackages()` — 0 resource types after cache linking** — When the system cache package was installed by third-party tools (e.g. Firely Terminal) that only place `package.json` inside the `package/` subdirectory (not at cache root), `PackageScanner` would discover the package at the wrong depth, causing `PackageLoader` to construct a double-nested `package/package` path → ENOENT → 0 StructureDefinitions loaded → 0 tables created → `no such table: Patient_References`
+- **New helper `ensureCacheRootManifest()`** — Copies `package/package.json` to cache root before creating junction/symlink, ensuring consistent structure regardless of which tool populated the cache
+
+### Changed
+
+- **Test suite expanded** — from 95 to 96 tests:
+  - New test: verify cache root `package.json` exists after resolve (Firely Terminal scenario)
+
+### Notes
+
+- Resolves `FIX_ZERO_RESOURCE_TYPES.md` — Method A fix applied in `fhir-engine`; optional Method B (fhir-definition scanner hardening) deferred to P1
+
+---
+
 ## [0.4.0] - 2026-03-15
 
 ### Added

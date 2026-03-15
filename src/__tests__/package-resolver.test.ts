@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resolve, join } from 'node:path';
-import { existsSync, mkdirSync, writeFileSync, rmSync, readdirSync, lstatSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, rmSync, readdirSync, lstatSync, readFileSync } from 'node:fs';
 import { resolvePackages } from '../package-resolver.js';
 import type { FhirEngineConfig, Logger } from '../types.js';
 
@@ -10,10 +10,10 @@ import type { FhirEngineConfig, Logger } from '../types.js';
 
 const TMP_ROOT = resolve(__dirname, '__tmp_resolve__');
 const silent: Logger = {
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {},
+  debug: () => { },
+  info: () => { },
+  warn: () => { },
+  error: () => { },
 };
 
 function tmpDir(name: string): string {
@@ -253,5 +253,36 @@ describe('resolvePackages', () => {
   it('resolvePackages is re-exported from fhir-engine index', async () => {
     const index = await import('../index.js');
     expect(typeof index.resolvePackages).toBe('function');
+  });
+
+  // ── Test 11: ensureCacheRootManifest fixes Firely-style cache (no root package.json) ──
+
+  it('copies package/package.json to cache root when root manifest is missing (Firely Terminal fix)', async () => {
+    const pkgPath = tmpDir('test11-packages');
+
+    const { PackageCache } = await import('fhir-definition');
+    const cache = new PackageCache();
+    const cachePath = cache.getPath('hl7.fhir.r4.core', '4.0.1');
+
+    if (!cachePath) {
+      console.log('SKIP: hl7.fhir.r4.core@4.0.1 not in system cache');
+      return;
+    }
+
+    // Verify the cache root has package.json after resolve (ensureCacheRootManifest should guarantee this)
+    const config = baseConfig(pkgPath, {
+      igs: [{ name: 'hl7.fhir.r4.core', version: '4.0.1' }],
+    });
+
+    const result = await resolvePackages(config, { logger: silent });
+    expect(result.success).toBe(true);
+
+    // After resolution, cache root MUST have package.json
+    const rootManifest = join(cachePath, 'package.json');
+    expect(existsSync(rootManifest)).toBe(true);
+
+    // And it should contain valid JSON with the package name
+    const manifest = JSON.parse(readFileSync(rootManifest, 'utf-8'));
+    expect(manifest.name).toBe('hl7.fhir.r4.core');
   });
 });
