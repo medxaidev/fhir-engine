@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-16
+
+### Changed
+
+- **`fhir-definition` dependency** — upgraded from `^0.5.0` to `^0.6.0` (semver range resolution, retry/offline support for PackageRegistryClient)
+- **`fhir-runtime` dependency** — upgraded from `^0.8.1` to `^0.9.0` (batch validation via `validateMany()`)
+- **`fhir-persistence` dependency** — upgraded from `^0.5.0` to `^0.6.0` (SQLite FTS5 / PostgreSQL tsvector full-text search, conditional operations, reindex progress reporting)
+
+### Added
+
+- **Re-exported reindex utilities** — `reindexResourceTypeV2`, `reindexAllV2` from fhir-persistence
+- **Re-exported batch validation types** — `BatchValidationOptions`, `BatchValidationResult` from fhir-runtime
+
+### Notes
+
+- Full-text search (FTS5/tsvector) is automatically enabled by fhir-persistence v0.6.0 — no fhir-engine code changes required
+- `runtime.validateMany()` enables batch validation of multiple resources in a single call
+- All v0.5.1 APIs remain backward compatible
+
+---
+
 ## [0.5.1] - 2026-03-16
 
 ### Changed

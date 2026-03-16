@@ -1,7 +1,7 @@
 # fhir-engine — AI Context Document
 
-**版本：** 0.5.1
-**日期：** 2026-03-15
+**版本：** 0.6.0
+**日期：** 2026-03-16
 **适用对象：** AI 编码助手（Copilot、Cascade、Claude 等）
 **用途：** 快速理解 fhir-engine 模块以执行代码任务
 
@@ -30,7 +30,7 @@
 
 ```
 名称:     fhir-engine
-版本:     0.5.1
+版本:     0.6.0
 层次:     Layer 2 (引擎层)
 职责:     将 Layer 1 的 3 个包组装为可运行的 FHIR 系统
 文件数:   7 个源文件
@@ -44,9 +44,9 @@
 
 ```
 允许依赖:
-  ← fhir-definition (Layer 1)
-  ← fhir-runtime (Layer 1)
-  ← fhir-persistence (Layer 1)
+  ← fhir-definition ^0.6.0 (Layer 1)
+  ← fhir-runtime ^0.9.0 (Layer 1)
+  ← fhir-persistence ^0.6.0 (Layer 1)
 
 禁止依赖:
   ✗ fhir-server, fhir-client, fhir-studio (Layer 3)
@@ -61,7 +61,7 @@
 
 ```
 src/
-├── engine.ts           → createFhirEngine() 主函数，~260 行
+├── engine.ts           → createFhirEngine() 主函数，~250 行
 │                         启动序列: config → definitions → runtime → await adapter
 │                         → plugin init → persistence → igResult.error 检查
 │                         → plugin start → plugin ready → return FhirEngine
@@ -123,9 +123,13 @@ evalFhirPathBoolean(expression: string, input: unknown): boolean
 evalFhirPathString(expression: string, input: unknown): string | undefined
 evalFhirPathTyped(expression: string, input: TypedValue[], variables?: Record<string, TypedValue>): TypedValue[]
 
+// 重索引 (v0.6.0, from fhir-persistence)
+reindexResourceTypeV2(adapter, resourceType, onProgress?): Promise<{ processed, updated, errors }>
+reindexAllV2(adapter, resourceTypes, onProgress?): Promise<ReindexResultV2>
+
 // 工具
 createConsoleLogger(): Logger
-createAdapter(config: DatabaseConfig, logger: Logger): StorageAdapter
+createAdapter(config: DatabaseConfig, logger: Logger): Promise<StorageAdapter>
 ```
 
 ### 类型导出
@@ -157,6 +161,10 @@ ResolvePackagesResult; // resolvePackages() 返回值
 SearchRequest; // from fhir-persistence
 SearchResult; // from fhir-persistence
 SearchOptions; // from fhir-persistence
+
+// 批量验证类型 (v0.6.0, from fhir-runtime)
+BatchValidationOptions;
+BatchValidationResult;
 
 // Re-exported upstream
 DefinitionRegistry; // from fhir-definition
@@ -286,11 +294,12 @@ function baseConfig(overrides?: Partial<FhirEngineConfig>): FhirEngineConfig {
 
 ## 8. 已知限制（AI 编码时注意）
 
-1. **PostgreSQL 不可用** — `createAdapter()` 对 `postgres` 类型抛异常，不要尝试连接 PostgreSQL
-2. **`ctx.persistence` 在 `init()` 中为 `undefined`** — 不要在 init 钩子中使用持久化
-3. **插件 `stop()` 错误不会传播** — 只记录日志，不会中止其他插件的 stop
-4. **`fhir-runtime` 需要 `preloadCore: false`** — 引擎已自动设置，不要覆盖
-5. **`LoadedPackage` 没有 `fhirVersion` 属性** — FHIR 版本从包名推导（`.r4.` → `'4.0'`）
+1. **`ctx.persistence` 在 `init()` 中为 `undefined`** — 不要在 init 钩子中使用持久化
+2. **插件 `stop()` 错误不会传播** — 只记录日志，不会中止其他插件的 stop
+3. **`fhir-runtime` 需要 `preloadCore: false`** — 引擎已自动设置，不要覆盖
+4. **`sqlite-wasm` 已弃用** — 使用 `type: 'sqlite'` 代替
+5. **`createAdapter()` 是异步函数** — v0.5.0+ 需要 `await`
+6. **FHIR 版本从包名推导** — `.r4.` → `'4.0'`，`.r4b.` → `'4.3'`，`.r5.` → `'5.0'`
 
 ---
 
@@ -399,4 +408,27 @@ export default defineConfig({
 
 ---
 
-_fhir-engine v0.5.1 — AI Context Document_
+### 使用批量验证
+
+```typescript
+const results = await engine.runtime.validateMany(resources, {
+  concurrency: 4,
+});
+for (const r of results) {
+  if (!r.valid) console.log(r.issues);
+}
+```
+
+### 使用重索引进度报告
+
+```typescript
+import { reindexAllV2 } from "fhir-engine";
+
+await reindexAllV2(engine.adapter, engine.resourceTypes, (info) => {
+  console.log(`${info.resourceType}: ${info.processed}/${info.total}`);
+});
+```
+
+---
+
+_fhir-engine v0.6.0 — AI Context Document_

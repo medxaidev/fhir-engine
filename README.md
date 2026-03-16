@@ -14,6 +14,9 @@
 - **Plugin system** — lifecycle hooks (`init` / `start` / `ready` / `stop`) for extensibility
 - **Config file support** — `fhir.config.ts` / `.js` / `.json` with env variable overrides
 - **Multi-adapter** — SQLite (native) and PostgreSQL out of the box
+- **Full-text search** — SQLite FTS5 and PostgreSQL tsvector/GIN (v0.6.0+)
+- **Batch validation** — `runtime.validateMany()` for bulk resource validation (v0.6.0+)
+- **Reindex with progress** — `reindexAllV2()` / `reindexResourceTypeV2()` with progress callbacks (v0.6.0+)
 - **TypeScript-first** — full type safety, dual ESM/CJS builds
 
 ## Install
@@ -29,6 +32,8 @@ npm install fhir-engine
 ```bash
 npm install fhir-definition fhir-runtime fhir-persistence
 ```
+
+> v0.6.0 requires: fhir-definition ≥ 0.6.0, fhir-runtime ≥ 0.9.0, fhir-persistence ≥ 0.6.0
 
 ## Quick Start
 
@@ -282,6 +287,36 @@ Loads config from a file. Auto-discovers `fhir.config.ts` → `.js` → `.mjs` �
 
 `pg` is included as a direct dependency (v0.5.1+), no separate installation needed.
 
+### Full-Text Search (v0.6.0+)
+
+Full-text search is automatically enabled by fhir-persistence v0.6.0:
+
+- **SQLite** — FTS5 virtual tables with trigram tokenizer
+- **PostgreSQL** — tsvector columns with GIN indexes
+
+No configuration required — string search parameters (e.g. `Patient?name=Smith`) automatically use FTS when available, with fallback to `LIKE` prefix matching.
+
+## Batch Validation (v0.6.0+)
+
+Validate multiple resources in a single call:
+
+```ts
+const results = await engine.runtime.validateMany(resources, {
+  concurrency: 4,
+});
+// BatchValidationResult[]
+```
+
+## Reindex with Progress (v0.6.0+)
+
+```ts
+import { reindexAllV2 } from "fhir-engine";
+
+await reindexAllV2(engine.adapter, engine.resourceTypes, (info) => {
+  console.log(`${info.resourceType}: ${info.processed}/${info.total}`);
+});
+```
+
 ```ts
 const engine = await createFhirEngine({
   database: {
@@ -302,3 +337,11 @@ const engine = await createFhirEngine({
 ## License
 
 [MIT](./LICENSE)
+
+## Upstream Dependency Versions
+
+| Package          | Required | Features added in this version                                     |
+| ---------------- | -------- | ------------------------------------------------------------------ |
+| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient   |
+| fhir-runtime     | ≥ 0.9.0  | `validateMany()` batch validation, `BatchValidationOptions/Result` |
+| fhir-persistence | ≥ 0.6.0  | FTS5/tsvector full-text search, `reindexAllV2` progress reporting  |

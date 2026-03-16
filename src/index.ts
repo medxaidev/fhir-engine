@@ -36,7 +36,19 @@ export { parseSearchRequest, executeSearch } from 'fhir-persistence';
 export type { SearchRequest, SearchResult, SearchOptions } from 'fhir-persistence';
 
 // ---------------------------------------------------------------------------
+// Reindex utilities (from fhir-persistence v0.6.0)
+// ---------------------------------------------------------------------------
+
+export { reindexResourceTypeV2, reindexAllV2 } from 'fhir-persistence';
+
+// ---------------------------------------------------------------------------
 // FHIRPath evaluation (from fhir-runtime)
 // ---------------------------------------------------------------------------
 
 export { evalFhirPath, evalFhirPathBoolean, evalFhirPathString, evalFhirPathTyped } from 'fhir-runtime';
+
+// ---------------------------------------------------------------------------
+// Batch validation (from fhir-runtime v0.9.0)
+// ---------------------------------------------------------------------------
+
+export type { BatchValidationOptions, BatchValidationResult } from 'fhir-runtime';

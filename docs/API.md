@@ -1,7 +1,7 @@
 # fhir-engine — API Reference
 
-**版本：** 0.5.1
-**日期：** 2026-03-15
+**版本：** 0.6.0
+**日期：** 2026-03-16
 **适用对象：** 开发者
 
 ---
@@ -21,7 +21,9 @@
 11. [包解析 API](#11-包解析-api)
 12. [搜索 API](#12-搜索-api)
 13. [FHIRPath API](#13-fhirpath-api)
-14. [Re-exported 上游类型](#14-re-exported-上游类型)
+14. [重索引 API](#14-重索引-api)
+15. [批量验证 API](#15-批量验证-api)
+16. [Re-exported 上游类型](#16-re-exported-上游类型)
 
 ---
 
@@ -45,14 +47,14 @@ function createFhirEngine(config?: FhirEngineConfig): Promise<FhirEngine>;
 
 ### 异常
 
-| 异常消息                                                  | 触发条件                      |
-| --------------------------------------------------------- | ----------------------------- |
-| `fhir-engine: config.database is required`                | `config.database` 未提供      |
-| `fhir-engine: config.database.type is required`           | `config.database.type` 未提供 |
-| `fhir-engine: config.packages is required`                | `config.packages` 未提供      |
-| `fhir-engine: config.packages.path is required`           | `config.packages.path` 未提供 |
-| `fhir-engine: PostgreSQL adapter is not yet available...` | `database.type = 'postgres'`  |
-| `fhir-engine: plugin "X" failed during Y: ...`            | 插件钩子抛出异常              |
+| 异常消息                                        | 触发条件                      |
+| ----------------------------------------------- | ----------------------------- |
+| `fhir-engine: config.database is required`      | `config.database` 未提供      |
+| `fhir-engine: config.database.type is required` | `config.database.type` 未提供 |
+| `fhir-engine: config.packages is required`      | `config.packages` 未提供      |
+| `fhir-engine: config.packages.path is required` | `config.packages.path` 未提供 |
+| `fhir-engine: schema migration failed: ...`     | IG 迁移错误（v0.5.0+）        |
+| `fhir-engine: plugin "X" failed during Y: ...`  | 插件钩子抛出异常              |
 
 ### 示例
 
@@ -289,7 +291,7 @@ const engine = await createFhirEngine({
 });
 ```
 
-> ℹ️ PostgreSQL 需要安装 `pg` 包：`npm install pg`
+> ℹ️ `pg` 已作为 fhir-engine 直接依赖（v0.5.1+），无需单独安装。
 
 ---
 
@@ -680,7 +682,80 @@ function evalFhirPathTyped(
 
 ---
 
-## 14. Re-exported 上游类型
+## 14. 重索引 API
+
+> v0.6.0 新增（来自 fhir-persistence v0.6.0）
+
+### reindexResourceTypeV2()
+
+```typescript
+function reindexResourceTypeV2(
+  adapter: StorageAdapter,
+  resourceType: string,
+  onProgress?: (info: {
+    resourceType: string;
+    processed: number;
+    total: number;
+  }) => void,
+): Promise<{ processed: number; updated: number; errors: number }>;
+```
+
+### reindexAllV2()
+
+```typescript
+function reindexAllV2(
+  adapter: StorageAdapter,
+  resourceTypes: string[],
+  onProgress?: (info: {
+    resourceType: string;
+    processed: number;
+    total: number;
+  }) => void,
+): Promise<ReindexResultV2>;
+```
+
+**示例：**
+
+```typescript
+import { reindexAllV2 } from "fhir-engine";
+
+await reindexAllV2(engine.adapter, engine.resourceTypes, (info) => {
+  console.log(`${info.resourceType}: ${info.processed}/${info.total}`);
+});
+```
+
+---
+
+## 15. 批量验证 API
+
+> v0.6.0 新增（来自 fhir-runtime v0.9.0）
+
+通过 `engine.runtime.validateMany()` 批量验证多个资源：
+
+```typescript
+const results = await engine.runtime.validateMany(resources, {
+  concurrency: 4,
+});
+// BatchValidationResult[]
+```
+
+### 类型
+
+```typescript
+interface BatchValidationOptions {
+  concurrency?: number; // 并发数（默认 1）
+}
+
+interface BatchValidationResult {
+  resource: FhirResource;
+  valid: boolean;
+  issues: ValidationIssue[];
+}
+```
+
+---
+
+## 16. Re-exported 上游类型
 
 以下类型从上游包 re-export，方便消费方直接从 `fhir-engine` 导入：
 
@@ -691,10 +766,19 @@ export type { DefinitionRegistry, DefinitionProvider } from "fhir-definition";
 // from fhir-runtime
 export type { FhirRuntimeInstance } from "fhir-runtime";
 
+// from fhir-runtime v0.9.0
+export type {
+  BatchValidationOptions,
+  BatchValidationResult,
+} from "fhir-runtime";
+
 // from fhir-persistence
 export type { FhirPersistence, StorageAdapter } from "fhir-persistence";
+
+// from fhir-persistence v0.6.0
+export { reindexResourceTypeV2, reindexAllV2 } from "fhir-persistence";
 ```
 
 ---
 
-_fhir-engine v0.5.1 — API Reference_
+_fhir-engine v0.6.0 — API Reference_
