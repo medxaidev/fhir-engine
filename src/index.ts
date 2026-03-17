@@ -57,17 +57,18 @@ export type { BatchValidationOptions, BatchValidationResult } from 'fhir-runtime
 // Profile Slicing utilities (from fhir-runtime v0.10.0)
 // ---------------------------------------------------------------------------
 
-export { matchSlice, countSliceInstances, generateSliceSkeleton, isExtensionSlicing } from 'fhir-runtime';
-export type { SlicedElement, SliceDefinition } from 'fhir-runtime';
+export { buildSlicingDefinition, makeExtensionSlicing, hasSliceName, extractSliceName, getSliceSiblings, validateSlicingCompatibility } from 'fhir-runtime';
+export type { SlicingDefinition, SlicingDiscriminatorDef, SlicingRules } from 'fhir-runtime';
 
 // ---------------------------------------------------------------------------
 // Choice Type utilities (from fhir-runtime v0.10.0)
 // ---------------------------------------------------------------------------
 
-export { isChoiceType, getChoiceBaseName, buildChoiceJsonKey, parseChoiceJsonKey, resolveActiveChoiceType, resolveChoiceFromJsonKey } from 'fhir-runtime';
+export { isChoiceTypePath, matchesChoiceType, extractChoiceTypeName } from 'fhir-runtime';
+export type { ChoiceTypeField, ChoiceValue } from 'fhir-runtime';
 
 // ---------------------------------------------------------------------------
 // BackboneElement utilities (from fhir-runtime v0.10.0)
 // ---------------------------------------------------------------------------
 
-export { isBackboneElement, isArrayElement, getBackboneChildren } from 'fhir-runtime';
+export { isBackboneElementType } from 'fhir-runtime';

@@ -286,28 +286,35 @@ console.log("Is active:", isActive);
 
 ## Profile Slicing (v0.6.1+)
 
-FHIR 切片 API — 匹配实例到切片定义、统计切片数量、生成预填骨架：
+FHIR 切片 API — 构建切片定义、检测切片名称、验证切片兼容性：
 
 ```typescript
 import {
-  matchSlice,
-  countSliceInstances,
-  generateSliceSkeleton,
-  isExtensionSlicing,
+  buildSlicingDefinition,
+  makeExtensionSlicing,
+  hasSliceName,
+  extractSliceName,
+  getSliceSiblings,
+  validateSlicingCompatibility,
 } from "fhir-engine";
-import type { SlicedElement, SliceDefinition } from "fhir-engine";
+import type {
+  SlicingDefinition,
+  SlicingDiscriminatorDef,
+  SlicingRules,
+} from "fhir-engine";
 
-// 匹配实例到命名切片
-const sliceName = matchSlice(categoryInstance, slicedElement); // 'VSCat' | null
+// 从 ElementDefinitionSlicing 构建 SlicingDefinition
+const slicingDef = buildSlicingDefinition(element.slicing);
 
-// 统计每个切片的实例数量
-const counts = countSliceInstances(categories, slicedElement); // Map<string, number>
+// 创建扩展切片（按 url 切片，value 判别器）
+const extSlicing = makeExtensionSlicing();
 
-// 生成预填判别器值的骨架
-const skeleton = generateSliceSkeleton(sliceDefinition);
+// 检查元素 id 是否包含切片名称
+hasSliceName("Patient.identifier:MRN"); // true
+hasSliceName("Patient.identifier"); // false
 
-// 检查是否为扩展切片
-const isExt = isExtensionSlicing("Patient.extension");
+// 从元素 id 提取切片名称
+extractSliceName("Patient.identifier:MRN"); // 'MRN'
 ```
 
 ---
@@ -318,20 +325,22 @@ const isExt = isExtensionSlicing("Patient.extension");
 
 ```typescript
 import {
-  isChoiceType,
-  getChoiceBaseName,
-  buildChoiceJsonKey,
-  parseChoiceJsonKey,
-  resolveActiveChoiceType,
+  isChoiceTypePath,
+  matchesChoiceType,
+  extractChoiceTypeName,
 } from "fhir-engine";
+import type { ChoiceTypeField, ChoiceValue } from "fhir-engine";
 
-getChoiceBaseName("Observation.value[x]"); // 'value'
-buildChoiceJsonKey("value", "Quantity"); // 'valueQuantity'
-parseChoiceJsonKey("valueQuantity", "value"); // 'Quantity'
+// 检查路径是否为选择类型
+isChoiceTypePath("Observation.value[x]"); // true
+isChoiceTypePath("Observation.valueString"); // false
 
-// 解析资源中激活的选择类型变体
-const info = resolveActiveChoiceType(element, observation);
-// { baseName: 'value', availableTypes: ['Quantity','string',...], activeType: 'Quantity', activeJsonKey: 'valueQuantity' }
+// 检查具体路径是否匹配选择类型路径
+matchesChoiceType("Observation.value[x]", "Observation.valueQuantity"); // true
+matchesChoiceType("Observation.value[x]", "Observation.code"); // false
+
+// 从具体路径提取类型名称
+extractChoiceTypeName("Observation.value[x]", "Observation.valueQuantity"); // 'Quantity'
 ```
 
 ---
@@ -339,17 +348,10 @@ const info = resolveActiveChoiceType(element, observation);
 ## BackboneElement 工具函数 (v0.6.1+)
 
 ```typescript
-import {
-  isBackboneElement,
-  isArrayElement,
-  getBackboneChildren,
-} from "fhir-engine";
+import { isBackboneElementType } from "fhir-engine";
 
-isBackboneElement(element); // 判断元素是否为 BackboneElement
-isArrayElement(element); // 判断元素是否允许多值 (max > 1)
-
-// 获取 BackboneElement 的直接子元素
-const children = getBackboneChildren("Patient.contact", profile);
+// 判断元素是否定义了 BackboneElement 类型
+isBackboneElementType(element); // true 如果 types 包含 BackboneElement 或 Element
 ```
 
 ---

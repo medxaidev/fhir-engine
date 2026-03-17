@@ -17,9 +17,9 @@
 - **Full-text search** — SQLite FTS5 and PostgreSQL tsvector/GIN (v0.6.0+)
 - **Batch validation** — `runtime.validateMany()` for bulk resource validation (v0.6.0+)
 - **Reindex with progress** — `reindexAllV2()` / `reindexResourceTypeV2()` with progress callbacks (v0.6.0+)
-- **Profile Slicing** — `matchSlice()`, `countSliceInstances()`, `generateSliceSkeleton()` for FHIR slice handling (v0.6.1+)
-- **Choice Type utilities** — `isChoiceType()`, `resolveActiveChoiceType()`, `buildChoiceJsonKey()` and more (v0.6.1+)
-- **BackboneElement utilities** — `isBackboneElement()`, `isArrayElement()`, `getBackboneChildren()` (v0.6.1+)
+- **Profile Slicing** — `buildSlicingDefinition()`, `makeExtensionSlicing()`, `hasSliceName()`, `extractSliceName()` for FHIR slice handling (v0.6.1+)
+- **Choice Type utilities** — `isChoiceTypePath()`, `matchesChoiceType()`, `extractChoiceTypeName()` (v0.6.1+)
+- **BackboneElement utilities** — `isBackboneElementType()` for detecting BackboneElement types (v0.6.1+)
 - **TypeScript-first** — full type safety, dual ESM/CJS builds
 
 ## Install
@@ -301,25 +301,35 @@ No configuration required — string search parameters (e.g. `Patient?name=Smith
 
 ## Profile Slicing (v0.6.1+)
 
-FHIR profile slicing utilities — match instances to slices, count slice populations, generate pre-filled skeletons:
+FHIR profile slicing utilities — build slicing definitions, detect slice names, validate slicing compatibility:
 
 ```ts
 import {
-  matchSlice,
-  countSliceInstances,
-  generateSliceSkeleton,
-  isExtensionSlicing,
+  buildSlicingDefinition,
+  makeExtensionSlicing,
+  hasSliceName,
+  extractSliceName,
+  getSliceSiblings,
+  validateSlicingCompatibility,
 } from "fhir-engine";
-import type { SlicedElement, SliceDefinition } from "fhir-engine";
+import type {
+  SlicingDefinition,
+  SlicingDiscriminatorDef,
+  SlicingRules,
+} from "fhir-engine";
 
-// Match an instance to a named slice
-const sliceName = matchSlice(categoryInstance, slicedElement); // 'VSCat' | null
+// Build a SlicingDefinition from an ElementDefinitionSlicing
+const slicingDef = buildSlicingDefinition(element.slicing);
 
-// Count how many instances match each slice
-const counts = countSliceInstances(categories, slicedElement); // Map<string, number>
+// Create extension slicing (sliced by url, value discriminator)
+const extSlicing = makeExtensionSlicing();
 
-// Generate a skeleton pre-filled with discriminator values
-const skeleton = generateSliceSkeleton(sliceDefinition);
+// Check if an element id contains a slice name
+hasSliceName("Patient.identifier:MRN"); // true
+hasSliceName("Patient.identifier"); // false
+
+// Extract the slice name from an element id
+extractSliceName("Patient.identifier:MRN"); // 'MRN'
 ```
 
 ## Choice Type Utilities (v0.6.1+)
@@ -328,35 +338,31 @@ Helpers for working with FHIR choice type elements (`value[x]`, `onset[x]`, etc.
 
 ```ts
 import {
-  isChoiceType,
-  getChoiceBaseName,
-  buildChoiceJsonKey,
-  parseChoiceJsonKey,
-  resolveActiveChoiceType,
-  resolveChoiceFromJsonKey,
+  isChoiceTypePath,
+  matchesChoiceType,
+  extractChoiceTypeName,
 } from "fhir-engine";
+import type { ChoiceTypeField, ChoiceValue } from "fhir-engine";
 
-getChoiceBaseName("Observation.value[x]"); // "value"
-buildChoiceJsonKey("value", "Quantity"); // "valueQuantity"
-parseChoiceJsonKey("valueQuantity", "value"); // "Quantity"
+// Check if a path is a choice type
+isChoiceTypePath("Observation.value[x]"); // true
+isChoiceTypePath("Observation.valueString"); // false
 
-// Resolve which choice variant is active in a resource
-const info = resolveActiveChoiceType(element, observation);
-// { baseName: 'value', availableTypes: ['Quantity','string',...], activeType: 'Quantity', activeJsonKey: 'valueQuantity' }
+// Check if a concrete path matches a choice type path
+matchesChoiceType("Observation.value[x]", "Observation.valueQuantity"); // true
+matchesChoiceType("Observation.value[x]", "Observation.code"); // false
+
+// Extract the type name from a concrete choice path
+extractChoiceTypeName("Observation.value[x]", "Observation.valueQuantity"); // "Quantity"
 ```
 
 ## BackboneElement Utilities (v0.6.1+)
 
 ```ts
-import {
-  isBackboneElement,
-  isArrayElement,
-  getBackboneChildren,
-} from "fhir-engine";
+import { isBackboneElementType } from "fhir-engine";
 
-isBackboneElement(element); // true if element type is BackboneElement
-isArrayElement(element); // true if max > 1
-const children = getBackboneChildren("Patient.contact", profile); // direct child elements
+// Check if an element defines a BackboneElement type
+isBackboneElementType(element); // true if types contain BackboneElement or Element
 ```
 
 ## Batch Validation (v0.6.0+)
@@ -403,8 +409,8 @@ const engine = await createFhirEngine({
 
 ## Upstream Dependency Versions
 
-| Package          | Required | Features added in this version                                                           |
-| ---------------- | -------- | ---------------------------------------------------------------------------------------- |
-| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient                         |
-| fhir-runtime     | ≥ 0.10.0 | Profile Slicing API, Choice Type utils, BackboneElement utils, `inferComplexType` bugfix |
-| fhir-persistence | ≥ 0.6.1  | FTS5/tsvector full-text search, `reindexAllV2` progress reporting                        |
+| Package          | Required | Features added in this version                                                                                    |
+| ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient                                                  |
+| fhir-runtime     | ≥ 0.10.0 | Profile Slicing, Choice Type, BackboneElement utils, `buildCanonicalProfile` slice fix, `inferComplexType` bugfix |
+| fhir-persistence | ≥ 0.6.1  | FTS5/tsvector full-text search, `reindexAllV2` progress reporting                                                 |

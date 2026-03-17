@@ -590,83 +590,123 @@ const familyName = evalFhirPathString(patient, "Patient.name.first().family");
 
 ## Profile Slicing API
 
-### `matchSlice(instance: Record<string, unknown>, slicedElement: SlicedElement): string | null`
+### `buildSlicingDefinition(slicing: ElementDefinitionSlicing | undefined): SlicingDefinition | undefined`
 
-匹配实例到切片定义。
+从 `ElementDefinitionSlicing` 构建规范化的 `SlicingDefinition`。
 
 **参数**:
 
-- `instance`: `Record<string, unknown>` - 要匹配的实例对象
-- `slicedElement`: `SlicedElement` - 切片元素定义
+- `slicing`: `ElementDefinitionSlicing | undefined` - 元素定义中的切片信息
 
-**返回**: `string | null` - 匹配的切片名称，未匹配返回 null
+**返回**: `SlicingDefinition | undefined` - 规范化的切片定义
 
 **示例**:
 
 ```typescript
-import { matchSlice } from "fhir-engine";
+import { buildSlicingDefinition } from "fhir-engine";
 
-const sliceName = matchSlice(categoryInstance, slicedElement);
-console.log("Matched slice:", sliceName); // 'VSCat' | null
+const slicingDef = buildSlicingDefinition(element.slicing);
 ```
 
 **版本**: >= 0.6.1 (需要 fhir-runtime >= 0.10.0)
 
 ---
 
-### `countSliceInstances(items: ReadonlyArray<Record<string, unknown>>, slicedElement: SlicedElement): Map<string, number>`
+### `makeExtensionSlicing(): ElementDefinitionSlicing`
 
-统计每个切片的实例数量。
+创建扩展元素的标准切片定义（按 `url` 切片，使用 `value` 判别器）。
 
-**参数**:
+**返回**: `ElementDefinitionSlicing` - 扩展切片定义
 
-- `items`: `ReadonlyArray<Record<string, unknown>>` - 实例数组
-- `slicedElement`: `SlicedElement` - 切片元素定义
+**示例**:
 
-**返回**: `Map<string, number>` - 切片名称到实例数量的映射
+```typescript
+import { makeExtensionSlicing } from "fhir-engine";
 
-**版本**: >= 0.6.1
-
----
-
-### `generateSliceSkeleton(slice: SliceDefinition): Record<string, unknown>`
-
-生成预填判别器值的骨架对象。
-
-**参数**:
-
-- `slice`: `SliceDefinition` - 切片定义
-
-**返回**: `Record<string, unknown>` - 预填值的骨架对象
+const extSlicing = makeExtensionSlicing();
+```
 
 **版本**: >= 0.6.1
 
 ---
 
-### `isExtensionSlicing(basePath: string): boolean`
+### `hasSliceName(elementId: string): boolean`
 
-检查元素是否为扩展切片。
+检查元素 id 是否包含切片名称（`:` 分隔符）。
 
 **参数**:
 
-- `basePath`: `string` - 元素基础路径
+- `elementId`: `string` - 元素 id
 
 **返回**: `boolean`
 
+**示例**:
+
+```typescript
+import { hasSliceName } from "fhir-engine";
+
+hasSliceName("Patient.identifier:MRN"); // true
+hasSliceName("Patient.identifier"); // false
+```
+
 **版本**: >= 0.6.1
 
 ---
 
-### `SlicedElement` 类型
+### `extractSliceName(elementId: string): string`
+
+从元素 id 中提取切片名称。
+
+**参数**:
+
+- `elementId`: `string` - 元素 id
+
+**返回**: `string` - 切片名称
+
+**示例**:
 
 ```typescript
-interface SlicedElement {
-  basePath: string;
+import { extractSliceName } from "fhir-engine";
+
+extractSliceName("Patient.identifier:MRN"); // 'MRN'
+```
+
+**版本**: >= 0.6.1
+
+---
+
+### `getSliceSiblings(...)`
+
+获取同一切片根路径下的所有命名切片元素。
+
+**版本**: >= 0.6.1
+
+---
+
+### `validateSlicingCompatibility(baseSlicing, diffSlicing, issues, path): boolean`
+
+验证 differential 中的切片定义是否与 base 切片定义兼容。
+
+**参数**:
+
+- `baseSlicing`: `ElementDefinitionSlicing` - 基础元素的切片定义
+- `diffSlicing`: `ElementDefinitionSlicing` - differential 元素的切片定义
+- `issues`: `SnapshotIssue[]` - 问题收集数组
+- `path`: `string` - 元素路径
+
+**返回**: `boolean` - 是否兼容
+
+**版本**: >= 0.6.1
+
+---
+
+### `SlicingDefinition` 类型
+
+```typescript
+interface SlicingDefinition {
   discriminators: SlicingDiscriminatorDef[];
   rules: SlicingRules;
   ordered: boolean;
-  description?: string;
-  slices: SliceDefinition[];
 }
 ```
 
@@ -674,20 +714,23 @@ interface SlicedElement {
 
 ---
 
-### `SliceDefinition` 类型
+### `SlicingDiscriminatorDef` 类型
 
 ```typescript
-interface SliceDefinition {
-  id: string;
-  sliceName: string;
-  basePath: string;
-  min: number;
-  max: number | "unbounded";
-  fixedValues: Record<string, unknown>;
-  mustSupport: boolean;
-  extensionUrl?: string;
-  extensionProfile?: string;
+interface SlicingDiscriminatorDef {
+  type: DiscriminatorType;
+  path: string;
 }
+```
+
+**版本**: >= 0.6.1
+
+---
+
+### `SlicingRules` 类型
+
+```typescript
+type SlicingRules = "closed" | "open" | "openAtEnd";
 ```
 
 **版本**: >= 0.6.1
@@ -696,61 +739,97 @@ interface SliceDefinition {
 
 ## Choice Type API
 
-### `isChoiceType(element: CanonicalElement): boolean`
+### `isChoiceTypePath(path: string): boolean`
 
-检查元素是否为选择类型（路径以 `[x]` 结尾）。
+检查路径是否以 `[x]` 结尾（选择类型通配符）。
 
-**版本**: >= 0.6.1
+**参数**:
 
----
+- `path`: `string` - 元素路径
 
-### `getChoiceBaseName(elementPath: string): string`
+**返回**: `boolean`
 
-获取选择类型基础名称。
-
-**示例**: `getChoiceBaseName('Observation.value[x]')` → `'value'`
-
-**版本**: >= 0.6.1
-
----
-
-### `buildChoiceJsonKey(baseName: string, typeCode: string): string`
-
-构建 JSON 键名。
-
-**示例**: `buildChoiceJsonKey('value', 'Quantity')` → `'valueQuantity'`
-
-**版本**: >= 0.6.1
-
----
-
-### `parseChoiceJsonKey(jsonKey: string, baseName: string): string | null`
-
-解析 JSON 键名中的类型代码。
-
-**示例**: `parseChoiceJsonKey('valueQuantity', 'value')` → `'Quantity'`
-
-**版本**: >= 0.6.1
-
----
-
-### `resolveActiveChoiceType(element: CanonicalElement, resource: Record<string, unknown>)`
-
-解析资源中激活的选择类型变体。
-
-**返回**:
+**示例**:
 
 ```typescript
-{ baseName: string; availableTypes: string[]; activeType: string | null; activeJsonKey: string | null }
+import { isChoiceTypePath } from "fhir-engine";
+
+isChoiceTypePath("Observation.value[x]"); // true
+isChoiceTypePath("Observation.valueString"); // false
+isChoiceTypePath("Observation.value"); // false
 ```
 
 **版本**: >= 0.6.1
 
 ---
 
-### `resolveChoiceFromJsonKey(jsonKey: string, elements: Map<string, CanonicalElement>): { element: CanonicalElement; typeCode: string } | null`
+### `matchesChoiceType(choicePath: string, concretePath: string): boolean`
 
-从资源中发现的 JSON 键名解析选择类型。
+检查具体路径是否匹配选择类型路径。
+
+**参数**:
+
+- `choicePath`: `string` - 选择类型路径（如 `Observation.value[x]`）
+- `concretePath`: `string` - 具体路径（如 `Observation.valueQuantity`）
+
+**返回**: `boolean`
+
+**示例**:
+
+```typescript
+import { matchesChoiceType } from "fhir-engine";
+
+matchesChoiceType("Observation.value[x]", "Observation.valueQuantity"); // true
+matchesChoiceType("Observation.value[x]", "Observation.valueString"); // true
+matchesChoiceType("Observation.value[x]", "Observation.code"); // false
+```
+
+**版本**: >= 0.6.1
+
+---
+
+### `extractChoiceTypeName(choicePath: string, concretePath: string): string`
+
+从具体路径中提取选择类型的类型名称。
+
+**参数**:
+
+- `choicePath`: `string` - 选择类型路径
+- `concretePath`: `string` - 具体路径
+
+**返回**: `string` - 类型名称
+
+**示例**:
+
+```typescript
+import { extractChoiceTypeName } from "fhir-engine";
+
+extractChoiceTypeName("Observation.value[x]", "Observation.valueQuantity"); // 'Quantity'
+```
+
+**版本**: >= 0.6.1
+
+---
+
+### `ChoiceTypeField` 类型
+
+```typescript
+interface ChoiceTypeField {
+  // Choice type 字段的元数据
+}
+```
+
+**版本**: >= 0.6.1
+
+---
+
+### `ChoiceValue` 类型
+
+```typescript
+interface ChoiceValue {
+  // Choice type 值的元数据
+}
+```
 
 **版本**: >= 0.6.1
 
@@ -758,32 +837,24 @@ interface SliceDefinition {
 
 ## BackboneElement API
 
-### `isBackboneElement(element: CanonicalElement): boolean`
+### `isBackboneElementType(element: CanonicalElement): boolean`
 
-检查元素是否为 BackboneElement。
-
-**版本**: >= 0.6.1
-
----
-
-### `isArrayElement(element: CanonicalElement): boolean`
-
-检查元素是否允许多值（max > 1）。
-
-**版本**: >= 0.6.1
-
----
-
-### `getBackboneChildren(parentPath: string, profile: CanonicalProfile): CanonicalElement[]`
-
-获取 BackboneElement 的直接子元素（过滤 id/extension/modifierExtension）。
+检查元素是否定义了 BackboneElement 或 Element 内部类型。当元素的 `types` 数组包含 `code === 'BackboneElement'` 或 `code === 'Element'` 时返回 `true`。
 
 **参数**:
 
-- `parentPath`: `string` - 父元素路径
-- `profile`: `CanonicalProfile` - 规范化 Profile
+- `element`: `CanonicalElement` - 规范化元素
 
-**返回**: `CanonicalElement[]` - 子元素数组
+**返回**: `boolean`
+
+**示例**:
+
+```typescript
+import { isBackboneElementType } from "fhir-engine";
+
+isBackboneElementType(contactElement); // true (Patient.contact)
+isBackboneElementType(nameElement); // false (Patient.name is HumanName)
+```
 
 **版本**: >= 0.6.1
 

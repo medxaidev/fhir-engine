@@ -14,9 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Re-exported Profile Slicing utilities** — `matchSlice`, `countSliceInstances`, `generateSliceSkeleton`, `isExtensionSlicing` functions and `SlicedElement`, `SliceDefinition` types from fhir-runtime v0.10.0
-- **Re-exported Choice Type utilities** — `isChoiceType`, `getChoiceBaseName`, `buildChoiceJsonKey`, `parseChoiceJsonKey`, `resolveActiveChoiceType`, `resolveChoiceFromJsonKey` from fhir-runtime v0.10.0
-- **Re-exported BackboneElement utilities** — `isBackboneElement`, `isArrayElement`, `getBackboneChildren` from fhir-runtime v0.10.0
+- **Re-exported Profile Slicing utilities** — `buildSlicingDefinition`, `makeExtensionSlicing`, `hasSliceName`, `extractSliceName`, `getSliceSiblings`, `validateSlicingCompatibility` functions and `SlicingDefinition`, `SlicingDiscriminatorDef`, `SlicingRules` types from fhir-runtime v0.10.0
+- **Re-exported Choice Type utilities** — `isChoiceTypePath`, `matchesChoiceType`, `extractChoiceTypeName` functions and `ChoiceTypeField`, `ChoiceValue` types from fhir-runtime v0.10.0
+- **Re-exported BackboneElement utilities** — `isBackboneElementType` from fhir-runtime v0.10.0
 
 ### Notes
 

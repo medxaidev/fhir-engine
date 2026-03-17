@@ -128,20 +128,20 @@ evalFhirPathString(resource: Resource, expression: string): string
 validateBatch(resources: Resource[], options?: BatchValidationOptions): BatchValidationResult
 
 // Profile Slicing (v0.10.0+)
-matchSlice(instance, slicedElement): string | null
-countSliceInstances(items, slicedElement): Map<string, number>
-generateSliceSkeleton(slice): Record<string, unknown>
+buildSlicingDefinition(slicing): SlicingDefinition | undefined
+makeExtensionSlicing(): ElementDefinitionSlicing
+hasSliceName(elementId): boolean
+extractSliceName(elementId): string
+getSliceSiblings(...): SliceElement[]
+validateSlicingCompatibility(base, diff, issues, path): boolean
 
 // Choice Type 辅助 (v0.10.0+)
-isChoiceType(element): boolean
-getChoiceBaseName(path): string
-buildChoiceJsonKey(baseName, typeCode): string
-resolveActiveChoiceType(element, resource): ActiveChoiceInfo
+isChoiceTypePath(path): boolean
+matchesChoiceType(choicePath, concretePath): boolean
+extractChoiceTypeName(choicePath, concretePath): string
 
 // BackboneElement 辅助 (v0.10.0+)
-isBackboneElement(element): boolean
-isArrayElement(element): boolean
-getBackboneChildren(parentPath, profile): CanonicalElement[]
+isBackboneElementType(element): boolean
 ```
 
 **版本**: >= 0.10.0 (Profile Slicing、Choice Type、BackboneElement 工具)
