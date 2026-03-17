@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-03-18
+
+### Changed
+
+- **`fhir-runtime` dependency** — upgraded from `^0.9.0` to `^0.10.0` (Profile Slicing & UI Utility API)
+- **`fhir-persistence` dependency** — upgraded from `^0.6.0` to `^0.6.1`
+
+### Added
+
+- **Re-exported Profile Slicing utilities** — `matchSlice`, `countSliceInstances`, `generateSliceSkeleton`, `isExtensionSlicing` functions and `SlicedElement`, `SliceDefinition` types from fhir-runtime v0.10.0
+- **Re-exported Choice Type utilities** — `isChoiceType`, `getChoiceBaseName`, `buildChoiceJsonKey`, `parseChoiceJsonKey`, `resolveActiveChoiceType`, `resolveChoiceFromJsonKey` from fhir-runtime v0.10.0
+- **Re-exported BackboneElement utilities** — `isBackboneElement`, `isArrayElement`, `getBackboneChildren` from fhir-runtime v0.10.0
+
+### Notes
+
+- fhir-runtime v0.10.0 fixes `buildCanonicalProfile()` to preserve slice definitions (previously sliced elements overwrote base elements)
+- fhir-runtime v0.10.0 fixes `inferComplexType()` edge-case misidentification of ContactPoint vs Identifier
+- `CanonicalProfile` now includes optional `slicing` field — fully backward compatible
+- All new APIs are additive re-exports; no fhir-engine internal logic changes required
+- No breaking changes — patch version bump (0.6.0 → 0.6.1)
+
+---
+
 ## [0.6.0] - 2026-03-16
 
 ### Changed

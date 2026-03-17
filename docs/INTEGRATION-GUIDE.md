@@ -1,0 +1,494 @@
+# FHIR Engine 接入指南 (Integration Guide)
+
+**文档版本**: v1.1.0  
+**适用引擎版本**: fhir-engine >= 0.6.1  
+**最后更新**: 2026-03-18
+
+---
+
+## 版本要求 (Version Requirements)
+
+### 必需环境 (Required Environment)
+
+- **Node.js**: >= 18.0.0
+- **npm**: >= 9.0.0
+- **TypeScript**: >= 5.0.0 (推荐 5.9.3)
+
+### 核心依赖版本 (Core Dependencies)
+
+- **fhir-engine**: ^0.6.1
+- **fhir-definition**: ^0.6.0
+- **fhir-persistence**: ^0.6.1
+- **fhir-runtime**: ^0.10.0
+
+### 数据库支持 (Database Support)
+
+- **SQLite**: better-sqlite3 >= 7.6.0 或 @sqlite.org/sqlite-wasm
+- **PostgreSQL**: pg >= 8.20.0, PostgreSQL Server >= 12.0
+
+---
+
+## 快速开始 (Quick Start)
+
+### 1. 安装 (Installation)
+
+```bash
+npm install fhir-engine
+```
+
+### 2. 基础配置 (Basic Configuration)
+
+#### SQLite 配置示例
+
+```typescript
+import { createFhirEngine, defineConfig } from "fhir-engine";
+
+const config = defineConfig({
+  database: {
+    type: "sqlite",
+    filename: "./fhir-data.db",
+  },
+  packages: {
+    sources: [{ name: "hl7.fhir.r4.core", version: "4.0.1" }],
+  },
+});
+
+const engine = await createFhirEngine(config);
+await engine.initialize();
+```
+
+#### PostgreSQL 配置示例
+
+```typescript
+import { createFhirEngine, defineConfig } from "fhir-engine";
+
+const config = defineConfig({
+  database: {
+    type: "postgres",
+    host: "localhost",
+    port: 5432,
+    database: "fhir_db",
+    user: "fhir_user",
+    password: "your_password",
+  },
+  packages: {
+    sources: [{ name: "hl7.fhir.r4.core", version: "4.0.1" }],
+  },
+});
+
+const engine = await createFhirEngine(config);
+await engine.initialize();
+```
+
+### 3. 基本操作 (Basic Operations)
+
+#### 创建资源 (Create Resource)
+
+```typescript
+const patient = {
+  resourceType: "Patient",
+  name: [{ family: "Smith", given: ["John"] }],
+  gender: "male",
+  birthDate: "1980-01-01",
+};
+
+const created = await engine.create(patient);
+console.log("Created patient:", created.id);
+```
+
+#### 读取资源 (Read Resource)
+
+```typescript
+const patient = await engine.read("Patient", "patient-id");
+console.log("Patient:", patient);
+```
+
+#### 更新资源 (Update Resource)
+
+```typescript
+patient.telecom = [{ system: "phone", value: "555-1234" }];
+const updated = await engine.update(patient);
+```
+
+#### 删除资源 (Delete Resource)
+
+```typescript
+await engine.delete("Patient", "patient-id");
+```
+
+#### 搜索资源 (Search Resources)
+
+```typescript
+import { parseSearchRequest, executeSearch } from "fhir-engine";
+
+const searchRequest = parseSearchRequest("Patient", {
+  family: "Smith",
+  gender: "male",
+});
+
+const results = await executeSearch(engine.getPersistence(), searchRequest);
+
+console.log("Found patients:", results.entry?.length);
+```
+
+---
+
+## 高级配置 (Advanced Configuration)
+
+### 完整配置选项
+
+```typescript
+import { defineConfig, createConsoleLogger } from "fhir-engine";
+
+const config = defineConfig({
+  // 数据库配置
+  database: {
+    type: "postgres",
+    host: "localhost",
+    port: 5432,
+    database: "fhir_db",
+    user: "fhir_user",
+    password: "password",
+    ssl: false,
+    poolSize: 10,
+  },
+
+  // FHIR 包配置
+  packages: {
+    sources: [
+      { name: "hl7.fhir.r4.core", version: "4.0.1" },
+      { name: "hl7.fhir.us.core", version: "5.0.1" },
+    ],
+    cacheDir: "./fhir-packages",
+  },
+
+  // 日志配置
+  logger: createConsoleLogger("info"),
+
+  // 插件配置
+  plugins: [
+    // 自定义插件
+  ],
+});
+```
+
+### 自定义日志 (Custom Logger)
+
+```typescript
+import type { Logger } from "fhir-engine";
+
+const customLogger: Logger = {
+  debug: (msg, meta) => console.debug(msg, meta),
+  info: (msg, meta) => console.info(msg, meta),
+  warn: (msg, meta) => console.warn(msg, meta),
+  error: (msg, meta) => console.error(msg, meta),
+};
+
+const config = defineConfig({
+  database: {
+    /* ... */
+  },
+  logger: customLogger,
+});
+```
+
+### 插件开发 (Plugin Development)
+
+```typescript
+import type { FhirEnginePlugin, EngineContext } from "fhir-engine";
+
+const myPlugin: FhirEnginePlugin = {
+  name: "my-custom-plugin",
+  version: "1.0.0",
+
+  async initialize(context: EngineContext) {
+    console.log("Plugin initialized");
+    // 访问 context.engine, context.persistence, context.runtime
+  },
+
+  async shutdown() {
+    console.log("Plugin shutdown");
+  },
+};
+
+const config = defineConfig({
+  database: {
+    /* ... */
+  },
+  plugins: [myPlugin],
+});
+```
+
+---
+
+## 数据迁移 (Data Migration)
+
+### 重建索引 (Reindex)
+
+```typescript
+import { reindexResourceTypeV2, reindexAllV2 } from "fhir-engine";
+
+// 重建单个资源类型索引
+await reindexResourceTypeV2(
+  engine.getPersistence().getAdapter(),
+  engine.getRuntime(),
+  "Patient",
+);
+
+// 重建所有资源索引
+await reindexAllV2(engine.getPersistence().getAdapter(), engine.getRuntime());
+```
+
+---
+
+## 验证和校验 (Validation)
+
+### 资源验证
+
+```typescript
+const validationResult = await engine.validate(patient);
+
+if (!validationResult.valid) {
+  console.error("Validation errors:", validationResult.issues);
+}
+```
+
+### 批量验证 (Batch Validation)
+
+```typescript
+import type { BatchValidationOptions } from "fhir-engine";
+
+const options: BatchValidationOptions = {
+  stopOnFirstError: false,
+  includeWarnings: true,
+};
+
+const results = await engine.validateBatch([patient1, patient2], options);
+```
+
+---
+
+## FHIRPath 查询 (FHIRPath Evaluation)
+
+```typescript
+import { evalFhirPath, evalFhirPathBoolean } from "fhir-engine";
+
+// 提取值
+const names = evalFhirPath(patient, "Patient.name.family");
+console.log("Family names:", names);
+
+// 布尔判断
+const isActive = evalFhirPathBoolean(patient, "Patient.active = true");
+console.log("Is active:", isActive);
+```
+
+---
+
+## Profile Slicing (v0.6.1+)
+
+FHIR 切片 API — 匹配实例到切片定义、统计切片数量、生成预填骨架：
+
+```typescript
+import {
+  matchSlice,
+  countSliceInstances,
+  generateSliceSkeleton,
+  isExtensionSlicing,
+} from "fhir-engine";
+import type { SlicedElement, SliceDefinition } from "fhir-engine";
+
+// 匹配实例到命名切片
+const sliceName = matchSlice(categoryInstance, slicedElement); // 'VSCat' | null
+
+// 统计每个切片的实例数量
+const counts = countSliceInstances(categories, slicedElement); // Map<string, number>
+
+// 生成预填判别器值的骨架
+const skeleton = generateSliceSkeleton(sliceDefinition);
+
+// 检查是否为扩展切片
+const isExt = isExtensionSlicing("Patient.extension");
+```
+
+---
+
+## Choice Type 工具函数 (v0.6.1+)
+
+处理 FHIR 选择类型元素（`value[x]`、`onset[x]` 等）：
+
+```typescript
+import {
+  isChoiceType,
+  getChoiceBaseName,
+  buildChoiceJsonKey,
+  parseChoiceJsonKey,
+  resolveActiveChoiceType,
+} from "fhir-engine";
+
+getChoiceBaseName("Observation.value[x]"); // 'value'
+buildChoiceJsonKey("value", "Quantity"); // 'valueQuantity'
+parseChoiceJsonKey("valueQuantity", "value"); // 'Quantity'
+
+// 解析资源中激活的选择类型变体
+const info = resolveActiveChoiceType(element, observation);
+// { baseName: 'value', availableTypes: ['Quantity','string',...], activeType: 'Quantity', activeJsonKey: 'valueQuantity' }
+```
+
+---
+
+## BackboneElement 工具函数 (v0.6.1+)
+
+```typescript
+import {
+  isBackboneElement,
+  isArrayElement,
+  getBackboneChildren,
+} from "fhir-engine";
+
+isBackboneElement(element); // 判断元素是否为 BackboneElement
+isArrayElement(element); // 判断元素是否允许多值 (max > 1)
+
+// 获取 BackboneElement 的直接子元素
+const children = getBackboneChildren("Patient.contact", profile);
+```
+
+---
+
+## 性能优化建议 (Performance Tips)
+
+### 1. 连接池配置
+
+```typescript
+const config = defineConfig({
+  database: {
+    type: "postgres",
+    poolSize: 20, // 根据并发需求调整
+    // ...
+  },
+});
+```
+
+### 2. 批量操作
+
+```typescript
+// 使用事务进行批量操作
+const adapter = engine.getPersistence().getAdapter();
+await adapter.transaction(async (tx) => {
+  for (const resource of resources) {
+    await tx.create(resource);
+  }
+});
+```
+
+### 3. 搜索优化
+
+```typescript
+// 使用分页
+const searchRequest = parseSearchRequest("Patient", {
+  _count: 50,
+  _offset: 0,
+});
+```
+
+---
+
+## 生产环境部署 (Production Deployment)
+
+### 环境变量配置
+
+```bash
+# .env
+NODE_ENV=production
+DB_TYPE=postgres
+DB_HOST=prod-db.example.com
+DB_PORT=5432
+DB_NAME=fhir_prod
+DB_USER=fhir_prod_user
+DB_PASSWORD=secure_password
+DB_SSL=true
+DB_POOL_SIZE=50
+```
+
+### 配置加载
+
+```typescript
+import { loadFhirConfig } from "fhir-engine";
+
+const config = await loadFhirConfig("./fhir-config.json");
+const engine = await createFhirEngine(config);
+```
+
+### 健康检查
+
+```typescript
+const status = engine.getStatus();
+console.log("Engine status:", status);
+// { initialized: true, database: 'connected', ... }
+```
+
+---
+
+## 错误处理 (Error Handling)
+
+```typescript
+try {
+  await engine.create(patient);
+} catch (error) {
+  if (error.code === "VALIDATION_ERROR") {
+    console.error("Validation failed:", error.issues);
+  } else if (error.code === "DUPLICATE_RESOURCE") {
+    console.error("Resource already exists");
+  } else {
+    console.error("Unexpected error:", error);
+  }
+}
+```
+
+---
+
+## 示例项目 (Example Projects)
+
+### Express.js 集成
+
+```typescript
+import express from "express";
+import { createFhirEngine, defineConfig } from "fhir-engine";
+
+const app = express();
+app.use(express.json());
+
+const engine = await createFhirEngine(
+  defineConfig({
+    database: { type: "sqlite", filename: "./fhir.db" },
+  }),
+);
+await engine.initialize();
+
+app.post("/fhir/:resourceType", async (req, res) => {
+  try {
+    const resource = await engine.create(req.body);
+    res.status(201).json(resource);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.listen(3000, () => console.log("FHIR server running on port 3000"));
+```
+
+---
+
+## 下一步 (Next Steps)
+
+1. 查看 [API-REFERENCE.md](./API-REFERENCE.md) 了解完整 API 文档
+2. 查看 [ARCHITECTURE-OVERVIEW.md](./ARCHITECTURE-OVERVIEW.md) 了解架构设计
+3. 遇到问题请查看 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+4. 阻塞问题请使用 [BLOCKING-ISSUES.md](./BLOCKING-ISSUES.md) 模版上报
+
+---
+
+## 技术支持 (Support)
+
+- **GitHub Issues**: https://github.com/medxaidev/fhir-engine/issues
+- **文档**: https://github.com/medxaidev/fhir-engine#readme
+- **邮件**: fangjun20208@gmail.com

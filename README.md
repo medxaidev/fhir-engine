@@ -17,6 +17,9 @@
 - **Full-text search** — SQLite FTS5 and PostgreSQL tsvector/GIN (v0.6.0+)
 - **Batch validation** — `runtime.validateMany()` for bulk resource validation (v0.6.0+)
 - **Reindex with progress** — `reindexAllV2()` / `reindexResourceTypeV2()` with progress callbacks (v0.6.0+)
+- **Profile Slicing** — `matchSlice()`, `countSliceInstances()`, `generateSliceSkeleton()` for FHIR slice handling (v0.6.1+)
+- **Choice Type utilities** — `isChoiceType()`, `resolveActiveChoiceType()`, `buildChoiceJsonKey()` and more (v0.6.1+)
+- **BackboneElement utilities** — `isBackboneElement()`, `isArrayElement()`, `getBackboneChildren()` (v0.6.1+)
 - **TypeScript-first** — full type safety, dual ESM/CJS builds
 
 ## Install
@@ -33,7 +36,7 @@ npm install fhir-engine
 npm install fhir-definition fhir-runtime fhir-persistence
 ```
 
-> v0.6.0 requires: fhir-definition ≥ 0.6.0, fhir-runtime ≥ 0.9.0, fhir-persistence ≥ 0.6.0
+> v0.6.1 requires: fhir-definition ≥ 0.6.0, fhir-runtime ≥ 0.10.0, fhir-persistence ≥ 0.6.1
 
 ## Quick Start
 
@@ -296,6 +299,66 @@ Full-text search is automatically enabled by fhir-persistence v0.6.0:
 
 No configuration required — string search parameters (e.g. `Patient?name=Smith`) automatically use FTS when available, with fallback to `LIKE` prefix matching.
 
+## Profile Slicing (v0.6.1+)
+
+FHIR profile slicing utilities — match instances to slices, count slice populations, generate pre-filled skeletons:
+
+```ts
+import {
+  matchSlice,
+  countSliceInstances,
+  generateSliceSkeleton,
+  isExtensionSlicing,
+} from "fhir-engine";
+import type { SlicedElement, SliceDefinition } from "fhir-engine";
+
+// Match an instance to a named slice
+const sliceName = matchSlice(categoryInstance, slicedElement); // 'VSCat' | null
+
+// Count how many instances match each slice
+const counts = countSliceInstances(categories, slicedElement); // Map<string, number>
+
+// Generate a skeleton pre-filled with discriminator values
+const skeleton = generateSliceSkeleton(sliceDefinition);
+```
+
+## Choice Type Utilities (v0.6.1+)
+
+Helpers for working with FHIR choice type elements (`value[x]`, `onset[x]`, etc.):
+
+```ts
+import {
+  isChoiceType,
+  getChoiceBaseName,
+  buildChoiceJsonKey,
+  parseChoiceJsonKey,
+  resolveActiveChoiceType,
+  resolveChoiceFromJsonKey,
+} from "fhir-engine";
+
+getChoiceBaseName("Observation.value[x]"); // "value"
+buildChoiceJsonKey("value", "Quantity"); // "valueQuantity"
+parseChoiceJsonKey("valueQuantity", "value"); // "Quantity"
+
+// Resolve which choice variant is active in a resource
+const info = resolveActiveChoiceType(element, observation);
+// { baseName: 'value', availableTypes: ['Quantity','string',...], activeType: 'Quantity', activeJsonKey: 'valueQuantity' }
+```
+
+## BackboneElement Utilities (v0.6.1+)
+
+```ts
+import {
+  isBackboneElement,
+  isArrayElement,
+  getBackboneChildren,
+} from "fhir-engine";
+
+isBackboneElement(element); // true if element type is BackboneElement
+isArrayElement(element); // true if max > 1
+const children = getBackboneChildren("Patient.contact", profile); // direct child elements
+```
+
 ## Batch Validation (v0.6.0+)
 
 Validate multiple resources in a single call:
@@ -340,8 +403,8 @@ const engine = await createFhirEngine({
 
 ## Upstream Dependency Versions
 
-| Package          | Required | Features added in this version                                     |
-| ---------------- | -------- | ------------------------------------------------------------------ |
-| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient   |
-| fhir-runtime     | ≥ 0.9.0  | `validateMany()` batch validation, `BatchValidationOptions/Result` |
-| fhir-persistence | ≥ 0.6.0  | FTS5/tsvector full-text search, `reindexAllV2` progress reporting  |
+| Package          | Required | Features added in this version                                                           |
+| ---------------- | -------- | ---------------------------------------------------------------------------------------- |
+| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient                         |
+| fhir-runtime     | ≥ 0.10.0 | Profile Slicing API, Choice Type utils, BackboneElement utils, `inferComplexType` bugfix |
+| fhir-persistence | ≥ 0.6.1  | FTS5/tsvector full-text search, `reindexAllV2` progress reporting                        |
