@@ -1,7 +1,7 @@
 # FHIR Engine 接入指南 (Integration Guide)
 
-**文档版本**: v1.1.0  
-**适用引擎版本**: fhir-engine >= 0.6.1  
+**文档版本**: v1.2.0  
+**适用引擎版本**: fhir-engine >= 0.6.2  
 **最后更新**: 2026-03-18
 
 ---
@@ -16,10 +16,10 @@
 
 ### 核心依赖版本 (Core Dependencies)
 
-- **fhir-engine**: ^0.6.1
+- **fhir-engine**: ^0.6.2
 - **fhir-definition**: ^0.6.0
-- **fhir-persistence**: ^0.6.1
-- **fhir-runtime**: ^0.10.0
+- **fhir-persistence**: ^0.7.0
+- **fhir-runtime**: ^0.11.0
 
 ### 数据库支持 (Database Support)
 
@@ -352,6 +352,61 @@ import { isBackboneElementType } from "fhir-engine";
 
 // 判断元素是否定义了 BackboneElement 类型
 isBackboneElementType(element); // true 如果 types 包含 BackboneElement 或 Element
+```
+
+---
+
+## IG 数据提取 (v0.6.2+)
+
+从 FHIR IG 资源中提取结构化数据：
+
+```typescript
+import {
+  extractSDDependencies,
+  extractElementIndexRows,
+  flattenConceptHierarchy,
+} from "fhir-engine";
+import type { ElementIndexRow, ConceptRow } from "fhir-engine";
+
+// 提取 StructureDefinition 的所有依赖
+const deps = extractSDDependencies(structureDefinition);
+// ['HumanName', 'Identifier', 'http://hl7.org/fhir/us/core/StructureDefinition/...']
+
+// 从 StructureDefinition snapshot 提取元素索引行
+const rows: ElementIndexRow[] = extractElementIndexRows(structureDefinition);
+
+// 将 CodeSystem 概念层级结构扁平化为父子关系行
+const concepts: ConceptRow[] = flattenConceptHierarchy(codeSystem);
+```
+
+---
+
+## Conformance 存储模块 (v0.6.2+)
+
+IG 持久化和索引：
+
+```typescript
+import {
+  IGImportOrchestrator,
+  IGResourceMapRepo,
+  SDIndexRepo,
+  ElementIndexRepo,
+  ExpansionCacheRepo,
+  ConceptHierarchyRepo,
+} from "fhir-engine";
+
+// 创建编排器执行完整 IG 导入
+const orchestrator = new IGImportOrchestrator(adapter, dialect, {
+  extractElementIndex: (sd) => extractElementIndexRows(sd),
+  flattenConcepts: (cs) => flattenConceptHierarchy(cs),
+});
+await orchestrator.ensureAllTables();
+const result = await orchestrator.importIG("hl7.fhir.us.core@6.1.0", igBundle);
+
+// 或直接使用单独的 Repo
+const sdIndex = new SDIndexRepo(adapter, dialect);
+await sdIndex.ensureTable();
+const entries = await sdIndex.getByType("Patient");
 ```
 
 ---

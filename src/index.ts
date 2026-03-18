@@ -72,3 +72,17 @@ export type { ChoiceTypeField, ChoiceValue } from 'fhir-runtime';
 // ---------------------------------------------------------------------------
 
 export { isBackboneElementType } from 'fhir-runtime';
+
+// ---------------------------------------------------------------------------
+// IG Extraction utilities (from fhir-runtime v0.11.0)
+// ---------------------------------------------------------------------------
+
+export { extractSDDependencies, extractElementIndexRows, flattenConceptHierarchy } from 'fhir-runtime';
+export type { ElementIndexRow, ConceptRow } from 'fhir-runtime';
+
+// ---------------------------------------------------------------------------
+// Conformance module (from fhir-persistence v0.7.0)
+// ---------------------------------------------------------------------------
+
+export { IGResourceMapRepo, SDIndexRepo, ElementIndexRepo, ExpansionCacheRepo, ConceptHierarchyRepo, SearchParamIndexRepo, IGImportOrchestrator } from 'fhir-persistence';
+export type { IGResourceMapEntry, IGIndex, SDIndexEntry, ElementIndexEntry, CachedExpansion, ConceptHierarchyEntry, IGImportResult } from 'fhir-persistence';

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-03-18
+
+### Changed
+
+- **`fhir-runtime` dependency** — upgraded from `^0.10.0` to `^0.11.0` (IG Extraction API)
+- **`fhir-persistence` dependency** — upgraded from `^0.6.1` to `^0.7.0` (Conformance Storage Module)
+
+### Added
+
+- **Re-exported IG Extraction utilities** — `extractSDDependencies`, `extractElementIndexRows`, `flattenConceptHierarchy` functions and `ElementIndexRow`, `ConceptRow` types from fhir-runtime v0.11.0
+- **Re-exported Conformance module** — `IGResourceMapRepo`, `SDIndexRepo`, `ElementIndexRepo`, `ExpansionCacheRepo`, `ConceptHierarchyRepo`, `SearchParamIndexRepo`, `IGImportOrchestrator` classes and `IGResourceMapEntry`, `IGIndex`, `SDIndexEntry`, `ElementIndexEntry`, `CachedExpansion`, `ConceptHierarchyEntry`, `IGImportResult` types from fhir-persistence v0.7.0
+
+### Notes
+
+- fhir-runtime v0.11.0 adds IG data extraction API: SD dependency extraction, element index row extraction, concept hierarchy flattening
+- fhir-persistence v0.7.0 adds Conformance storage module: 5 index/cache tables + IG import orchestrator for IG Explorer support
+- All new APIs are additive re-exports; no fhir-engine internal logic changes required
+- No breaking changes — patch version bump (0.6.1 → 0.6.2)
+
+---
+
 ## [0.6.1] - 2026-03-18
 
 ### Changed

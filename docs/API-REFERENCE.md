@@ -1,23 +1,25 @@
 # FHIR Engine API 参考文档 (API Reference)
 
-**文档版本**: v1.1.0  
-**适用引擎版本**: fhir-engine >= 0.6.1  
+**文档版本**: v1.2.0  
+**适用引擎版本**: fhir-engine >= 0.6.2  
 **最后更新**: 2026-03-18
 
 ---
 
 ## 版本兼容性 (Version Compatibility)
 
-| API 功能            | 最低版本              | 推荐版本 |
-| ------------------- | --------------------- | -------- |
-| Core Engine API     | 0.6.0                 | 0.6.1    |
-| Search API          | 0.6.0                 | 0.6.1    |
-| Reindex V2 API      | 0.6.0                 | 0.6.1    |
-| Batch Validation    | 0.9.0 (fhir-runtime)  | 0.10.0   |
-| FHIRPath Evaluation | 0.9.0 (fhir-runtime)  | 0.10.0   |
-| Profile Slicing API | 0.10.0 (fhir-runtime) | 0.10.0   |
-| Choice Type API     | 0.10.0 (fhir-runtime) | 0.10.0   |
-| BackboneElement API | 0.10.0 (fhir-runtime) | 0.10.0   |
+| API 功能            | 最低版本                 | 推荐版本 |
+| ------------------- | ------------------------ | -------- |
+| Core Engine API     | 0.6.0                    | 0.6.2    |
+| Search API          | 0.6.0                    | 0.6.2    |
+| Reindex V2 API      | 0.6.0                    | 0.6.2    |
+| Batch Validation    | 0.9.0 (fhir-runtime)     | 0.11.0   |
+| FHIRPath Evaluation | 0.9.0 (fhir-runtime)     | 0.11.0   |
+| Profile Slicing API | 0.10.0 (fhir-runtime)    | 0.11.0   |
+| Choice Type API     | 0.10.0 (fhir-runtime)    | 0.11.0   |
+| BackboneElement API | 0.10.0 (fhir-runtime)    | 0.11.0   |
+| IG Extraction API   | 0.11.0 (fhir-runtime)    | 0.11.0   |
+| Conformance Module  | 0.7.0 (fhir-persistence) | 0.7.0    |
 
 ---
 
@@ -32,10 +34,12 @@
 7. [Profile Slicing API](#profile-slicing-api)
 8. [Choice Type API](#choice-type-api)
 9. [BackboneElement API](#backboneelement-api)
-10. [重建索引 API](#重建索引-api)
-11. [适配器 API](#适配器-api)
-12. [日志 API](#日志-api)
-13. [类型定义](#类型定义)
+10. [IG Extraction API](#ig-extraction-api)
+11. [Conformance Module API](#conformance-module-api)
+12. [重建索引 API](#重建索引-api)
+13. [适配器 API](#适配器-api)
+14. [日志 API](#日志-api)
+15. [类型定义](#类型定义)
 
 ---
 
@@ -857,6 +861,331 @@ isBackboneElementType(nameElement); // false (Patient.name is HumanName)
 ```
 
 **版本**: >= 0.6.1
+
+---
+
+## IG Extraction API
+
+### `extractSDDependencies(sd: StructureDefinition): string[]`
+
+从 StructureDefinition 中提取所有直接依赖的类型名称。扫描 snapshot.element[].type[].code 和 profile，去重后返回。
+
+**参数**:
+
+- `sd`: `StructureDefinition` - 完整的 SD（需有 snapshot）
+
+**返回**: `string[]` - 依赖的类型名/Profile URL 数组（去重排序）
+
+**示例**:
+
+```typescript
+import { extractSDDependencies } from "fhir-engine";
+
+const deps = extractSDDependencies(patientSD);
+// ['HumanName', 'Identifier', 'Address', ...]
+```
+
+**版本**: >= 0.6.2 (需要 fhir-runtime >= 0.11.0)
+
+---
+
+### `extractElementIndexRows(sd: StructureDefinition): ElementIndexRow[]`
+
+从 StructureDefinition snapshot 中提取 element 索引行。每个 element 转换为一个 ElementIndexRow。
+
+**参数**:
+
+- `sd`: `StructureDefinition` - 完整的 SD（需有 snapshot）
+
+**返回**: `ElementIndexRow[]` - element 索引行数组
+
+**版本**: >= 0.6.2
+
+---
+
+### `flattenConceptHierarchy(codeSystem: CodeSystemDefinition): ConceptRow[]`
+
+将 CodeSystem.concept[] 嵌套结构扁平化为 parent-child 行。
+
+**参数**:
+
+- `codeSystem`: `CodeSystemDefinition` - CodeSystem 资源
+
+**返回**: `ConceptRow[]` - 扁平化的 concept 行数组
+
+**版本**: >= 0.6.2
+
+---
+
+### `ElementIndexRow` 类型
+
+```typescript
+interface ElementIndexRow {
+  id: string;
+  structureId: string;
+  path: string;
+  min?: number;
+  max?: string;
+  typeCodes: string[];
+  isSlice: boolean;
+  sliceName?: string;
+  isExtension: boolean;
+  bindingValueSet?: string;
+  mustSupport: boolean;
+}
+```
+
+**版本**: >= 0.6.2
+
+---
+
+### `ConceptRow` 类型
+
+```typescript
+interface ConceptRow {
+  id: string;
+  codeSystemUrl: string;
+  codeSystemVersion?: string;
+  code: string;
+  display?: string;
+  parentCode: string | null;
+  level: number;
+}
+```
+
+**版本**: >= 0.6.2
+
+---
+
+## Conformance Module API
+
+### `IGImportOrchestrator`
+
+协调所有 conformance repo，执行完整 IG 导入流程。
+
+```typescript
+class IGImportOrchestrator {
+  constructor(
+    adapter: StorageAdapter,
+    dialect: DDLDialect,
+    options?: {
+      extractElementIndex?: (
+        sd: Record<string, unknown>,
+      ) => ElementIndexEntry[];
+      flattenConcepts?: (
+        cs: Record<string, unknown>,
+      ) => ConceptHierarchyEntry[];
+    },
+  );
+
+  ensureAllTables(): Promise<void>;
+  importIG(igId: string, bundle: FhirBundle): Promise<IGImportResult>;
+  get repos(): {
+    resourceMap;
+    sdIndex;
+    elementIndex;
+    expansionCache;
+    conceptHierarchy;
+    searchParamIndex;
+  };
+}
+```
+
+**版本**: >= 0.6.2 (需要 fhir-persistence >= 0.7.0)
+
+---
+
+### `IGResourceMapRepo`
+
+IG 资源映射表 CRUD。
+
+```typescript
+class IGResourceMapRepo {
+  ensureTable(): Promise<void>;
+  batchInsert(igId: string, entries: IGResourceMapEntry[]): Promise<number>;
+  getIGIndex(igId: string): Promise<IGIndex>;
+  getByType(igId: string, resourceType: string): Promise<IGResourceMapEntry[]>;
+  removeIG(igId: string): Promise<void>;
+}
+```
+
+**版本**: >= 0.6.2
+
+---
+
+### `SDIndexRepo`
+
+StructureDefinition 索引表 CRUD。
+
+```typescript
+class SDIndexRepo {
+  ensureTable(): Promise<void>;
+  upsert(entry: SDIndexEntry): Promise<void>;
+  batchUpsert(entries: SDIndexEntry[]): Promise<number>;
+  getById(id: string): Promise<SDIndexEntry | undefined>;
+  getByUrl(url: string): Promise<SDIndexEntry[]>;
+  getByType(type: string): Promise<SDIndexEntry[]>;
+  getByBaseDefinition(baseUrl: string): Promise<SDIndexEntry[]>;
+  remove(id: string): Promise<void>;
+}
+```
+
+**版本**: >= 0.6.2
+
+---
+
+### `ElementIndexRepo`
+
+Element 索引表 CRUD。
+
+```typescript
+class ElementIndexRepo {
+  ensureTable(): Promise<void>;
+  batchInsert(
+    structureId: string,
+    elements: ElementIndexEntry[],
+  ): Promise<number>;
+  getByStructureId(structureId: string): Promise<ElementIndexEntry[]>;
+  searchByPath(pathPattern: string): Promise<ElementIndexEntry[]>;
+  removeByStructureId(structureId: string): Promise<void>;
+}
+```
+
+**版本**: >= 0.6.2
+
+---
+
+### `ExpansionCacheRepo`
+
+ValueSet expansion 缓存表。
+
+```typescript
+class ExpansionCacheRepo {
+  ensureTable(): Promise<void>;
+  upsert(
+    url: string,
+    version: string,
+    expansionJson: string,
+    codeCount: number,
+  ): Promise<void>;
+  get(url: string, version: string): Promise<CachedExpansion | undefined>;
+  invalidate(url: string, version: string): Promise<void>;
+  clear(): Promise<void>;
+}
+```
+
+**版本**: >= 0.6.2
+
+---
+
+### `ConceptHierarchyRepo`
+
+CodeSystem concept 层级表 CRUD。
+
+```typescript
+class ConceptHierarchyRepo {
+  ensureTable(): Promise<void>;
+  batchInsert(entries: ConceptHierarchyEntry[]): Promise<number>;
+  getTree(codeSystemUrl: string): Promise<ConceptHierarchyEntry[]>;
+  getChildren(
+    codeSystemUrl: string,
+    parentCode: string,
+  ): Promise<ConceptHierarchyEntry[]>;
+  lookup(
+    codeSystemUrl: string,
+    code: string,
+  ): Promise<ConceptHierarchyEntry | undefined>;
+  removeByCodeSystem(codeSystemUrl: string): Promise<void>;
+}
+```
+
+**版本**: >= 0.6.2
+
+---
+
+### `SearchParamIndexRepo`
+
+SearchParameter 索引表 CRUD。
+
+**版本**: >= 0.6.2
+
+---
+
+### Conformance 类型
+
+```typescript
+interface IGResourceMapEntry {
+  igId: string;
+  resourceType: string;
+  resourceId: string;
+  resourceUrl?: string;
+  resourceName?: string;
+  baseType?: string;
+}
+
+interface IGIndex {
+  profiles: IGResourceMapEntry[];
+  extensions: IGResourceMapEntry[];
+  valueSets: IGResourceMapEntry[];
+  codeSystems: IGResourceMapEntry[];
+  searchParameters: IGResourceMapEntry[];
+}
+
+interface SDIndexEntry {
+  id: string;
+  url?: string;
+  version?: string;
+  type?: string;
+  kind?: string;
+  baseDefinition?: string;
+  derivation?: string;
+  snapshotHash?: string;
+}
+
+interface ElementIndexEntry {
+  id: string;
+  structureId: string;
+  path: string;
+  min?: number;
+  max?: string;
+  typeCodes?: string[];
+  isSlice?: boolean;
+  sliceName?: string;
+  isExtension?: boolean;
+  bindingValueSet?: string;
+  mustSupport?: boolean;
+}
+
+interface CachedExpansion {
+  valuesetUrl: string;
+  version: string;
+  expandedAt: string;
+  codeCount: number;
+  expansionJson: string;
+}
+
+interface ConceptHierarchyEntry {
+  id: string;
+  codeSystemUrl: string;
+  codeSystemVersion?: string;
+  code: string;
+  display?: string;
+  parentCode?: string;
+  level: number;
+}
+
+interface IGImportResult {
+  igId: string;
+  resourceCount: number;
+  sdIndexCount: number;
+  elementIndexCount: number;
+  conceptCount: number;
+  spIndexCount: number;
+  errors: string[];
+}
+```
+
+**版本**: >= 0.6.2
 
 ---
 

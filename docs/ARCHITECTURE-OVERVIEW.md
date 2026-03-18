@@ -1,7 +1,7 @@
 # FHIR Engine 架构概览 (Architecture Overview)
 
-**文档版本**: v1.1.0  
-**适用引擎版本**: fhir-engine >= 0.6.1  
+**文档版本**: v1.2.0  
+**适用引擎版本**: fhir-engine >= 0.6.2  
 **最后更新**: 2026-03-18
 
 ---
@@ -10,10 +10,10 @@
 
 ### 核心组件版本
 
-- **fhir-engine**: 0.6.1
+- **fhir-engine**: 0.6.2
 - **fhir-definition**: 0.6.0
-- **fhir-persistence**: 0.6.1
-- **fhir-runtime**: 0.10.0
+- **fhir-persistence**: 0.7.0
+- **fhir-runtime**: 0.11.0
 
 ### 技术栈要求
 
@@ -142,9 +142,14 @@ extractChoiceTypeName(choicePath, concretePath): string
 
 // BackboneElement 辅助 (v0.10.0+)
 isBackboneElementType(element): boolean
+
+// IG 数据提取 (v0.11.0+)
+extractSDDependencies(sd): string[]
+extractElementIndexRows(sd): ElementIndexRow[]
+flattenConceptHierarchy(codeSystem): ConceptRow[]
 ```
 
-**版本**: >= 0.10.0 (Profile Slicing、Choice Type、BackboneElement 工具)
+**版本**: >= 0.11.0 (Profile Slicing、Choice Type、BackboneElement 工具、IG 提取 API)
 
 ---
 
@@ -705,6 +710,7 @@ const logger = createConsoleLogger("debug");
 
 | fhir-engine | fhir-runtime | fhir-persistence | fhir-definition | Node.js |
 | ----------- | ------------ | ---------------- | --------------- | ------- |
+| 0.6.2       | 0.11.0       | 0.7.0            | 0.6.0           | >= 18.0 |
 | 0.6.1       | 0.10.0       | 0.6.1            | 0.6.0           | >= 18.0 |
 | 0.6.0       | 0.9.0        | 0.6.0            | 0.6.0           | >= 18.0 |
 | 0.5.x       | 0.8.x        | 0.5.x            | 0.5.x           | >= 16.0 |

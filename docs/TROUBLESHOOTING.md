@@ -1,7 +1,7 @@
 # FHIR Engine 故障排查指南 (Troubleshooting Guide)
 
-**文档版本**: v1.1.0  
-**适用引擎版本**: fhir-engine >= 0.6.1  
+**文档版本**: v1.2.0  
+**适用引擎版本**: fhir-engine >= 0.6.2  
 **最后更新**: 2026-03-18
 
 ---
@@ -12,9 +12,9 @@
 
 - **Node.js**: >= 18.0.0
 - **npm**: >= 9.0.0
-- **fhir-engine**: >= 0.6.1
-- **fhir-runtime**: >= 0.10.0
-- **fhir-persistence**: >= 0.6.1
+- **fhir-engine**: >= 0.6.2
+- **fhir-runtime**: >= 0.11.0
+- **fhir-persistence**: >= 0.7.0
 - **fhir-definition**: >= 0.6.0
 
 ---

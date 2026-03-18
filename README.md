@@ -20,6 +20,8 @@
 - **Profile Slicing** — `buildSlicingDefinition()`, `makeExtensionSlicing()`, `hasSliceName()`, `extractSliceName()` for FHIR slice handling (v0.6.1+)
 - **Choice Type utilities** — `isChoiceTypePath()`, `matchesChoiceType()`, `extractChoiceTypeName()` (v0.6.1+)
 - **BackboneElement utilities** — `isBackboneElementType()` for detecting BackboneElement types (v0.6.1+)
+- **IG Extraction** — `extractSDDependencies()`, `extractElementIndexRows()`, `flattenConceptHierarchy()` for IG data extraction (v0.6.2+)
+- **Conformance module** — `IGResourceMapRepo`, `SDIndexRepo`, `ElementIndexRepo`, `ExpansionCacheRepo`, `ConceptHierarchyRepo`, `IGImportOrchestrator` for IG persistence (v0.6.2+)
 - **TypeScript-first** — full type safety, dual ESM/CJS builds
 
 ## Install
@@ -36,7 +38,7 @@ npm install fhir-engine
 npm install fhir-definition fhir-runtime fhir-persistence
 ```
 
-> v0.6.1 requires: fhir-definition ≥ 0.6.0, fhir-runtime ≥ 0.10.0, fhir-persistence ≥ 0.6.1
+> v0.6.2 requires: fhir-definition ≥ 0.6.0, fhir-runtime ≥ 0.11.0, fhir-persistence ≥ 0.7.0
 
 ## Quick Start
 
@@ -365,6 +367,62 @@ import { isBackboneElementType } from "fhir-engine";
 isBackboneElementType(element); // true if types contain BackboneElement or Element
 ```
 
+## IG Extraction (v0.6.2+)
+
+Utilities for extracting structured data from FHIR IG resources:
+
+```ts
+import {
+  extractSDDependencies,
+  extractElementIndexRows,
+  flattenConceptHierarchy,
+} from "fhir-engine";
+import type { ElementIndexRow, ConceptRow } from "fhir-engine";
+
+// Extract all dependencies from a StructureDefinition
+const deps = extractSDDependencies(structureDefinition);
+// ['HumanName', 'Identifier', 'http://hl7.org/fhir/us/core/StructureDefinition/...']
+
+// Extract element index rows from a StructureDefinition snapshot
+const rows: ElementIndexRow[] = extractElementIndexRows(structureDefinition);
+
+// Flatten CodeSystem concept hierarchy into parent-child rows
+const concepts: ConceptRow[] = flattenConceptHierarchy(codeSystem);
+```
+
+## Conformance Module (v0.6.2+)
+
+IG persistence and indexing via the Conformance storage module:
+
+```ts
+import {
+  IGImportOrchestrator,
+  IGResourceMapRepo,
+  SDIndexRepo,
+  ElementIndexRepo,
+  ExpansionCacheRepo,
+  ConceptHierarchyRepo,
+} from "fhir-engine";
+
+// Create the orchestrator for full IG import
+const orchestrator = new IGImportOrchestrator(adapter, dialect, {
+  extractElementIndex: (sd) => extractElementIndexRows(sd),
+  flattenConcepts: (cs) => flattenConceptHierarchy(cs),
+});
+await orchestrator.ensureAllTables();
+
+// Import an entire IG bundle
+const result = await orchestrator.importIG("hl7.fhir.us.core@6.1.0", igBundle);
+console.log(
+  `Imported ${result.resourceCount} resources, ${result.sdIndexCount} SDs`,
+);
+
+// Or use individual repos directly
+const sdIndex = new SDIndexRepo(adapter, dialect);
+await sdIndex.ensureTable();
+const entries = await sdIndex.getByType("Patient");
+```
+
 ## Batch Validation (v0.6.0+)
 
 Validate multiple resources in a single call:
@@ -409,8 +467,8 @@ const engine = await createFhirEngine({
 
 ## Upstream Dependency Versions
 
-| Package          | Required | Features added in this version                                                                                    |
-| ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
-| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient                                                  |
-| fhir-runtime     | ≥ 0.10.0 | Profile Slicing, Choice Type, BackboneElement utils, `buildCanonicalProfile` slice fix, `inferComplexType` bugfix |
-| fhir-persistence | ≥ 0.6.1  | FTS5/tsvector full-text search, `reindexAllV2` progress reporting                                                 |
+| Package          | Required | Features added in this version                                                                                      |
+| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient                                                    |
+| fhir-runtime     | ≥ 0.11.0 | IG Extraction API, Profile Slicing, Choice Type, BackboneElement utils, `inferComplexType` bugfix                   |
+| fhir-persistence | ≥ 0.7.0  | Conformance storage module (IG index, SD/element index, expansion cache, concept hierarchy, IG import orchestrator) |
