@@ -86,3 +86,17 @@ export type { ElementIndexRow, ConceptRow } from 'fhir-runtime';
 
 export { IGResourceMapRepo, SDIndexRepo, ElementIndexRepo, ExpansionCacheRepo, ConceptHierarchyRepo, SearchParamIndexRepo, IGImportOrchestrator } from 'fhir-persistence';
 export type { IGResourceMapEntry, IGIndex, SDIndexEntry, ElementIndexEntry, CachedExpansion, ConceptHierarchyEntry, IGImportResult } from 'fhir-persistence';
+
+// ---------------------------------------------------------------------------
+// Error types (from fhir-persistence)
+// ---------------------------------------------------------------------------
+
+export { RepositoryError, ResourceNotFoundError, ResourceVersionConflictError, ResourceGoneError } from 'fhir-persistence';
+
+// ---------------------------------------------------------------------------
+// Search Bundle utilities (from fhir-persistence)
+// ---------------------------------------------------------------------------
+
+export { buildSearchBundle, buildPaginationContext, buildNextLink, buildSelfLink, hasNextPage, splitSearchValues, hashToken } from 'fhir-persistence';
+export { DEFAULT_SEARCH_COUNT, MAX_SEARCH_COUNT } from 'fhir-persistence';
+export type { SearchBundle, SearchBundleEntry, BuildSearchBundleOptions, PaginationContext } from 'fhir-persistence';

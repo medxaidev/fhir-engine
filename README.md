@@ -22,6 +22,11 @@
 - **BackboneElement utilities** — `isBackboneElementType()` for detecting BackboneElement types (v0.6.1+)
 - **IG Extraction** — `extractSDDependencies()`, `extractElementIndexRows()`, `flattenConceptHierarchy()` for IG data extraction (v0.6.2+)
 - **Conformance module** — `IGResourceMapRepo`, `SDIndexRepo`, `ElementIndexRepo`, `ExpansionCacheRepo`, `ConceptHierarchyRepo`, `IGImportOrchestrator` for IG persistence (v0.6.2+)
+- **Token search (UPS-1)** — `gender=male`, `identifier=system|code`, `identifier=code` with code-only/empty-system/full system|code formats (v0.7.0+)
+- **String search (UPS-2)** — `name=Smith`, `family=Smith`, `given=John` via HumanName lookup table with case-insensitive prefix matching (v0.7.0+)
+- **Optimistic locking (UPS-3)** — `ifMatch` option on `updateResource()` with `ResourceVersionConflictError` (v0.7.0+)
+- **Error types** — `RepositoryError`, `ResourceNotFoundError`, `ResourceVersionConflictError`, `ResourceGoneError` (v0.7.0+)
+- **Search bundle utilities** — `buildSearchBundle`, `buildPaginationContext`, `buildNextLink`, pagination helpers (v0.7.0+)
 - **TypeScript-first** — full type safety, dual ESM/CJS builds
 
 ## Install
@@ -38,7 +43,7 @@ npm install fhir-engine
 npm install fhir-definition fhir-runtime fhir-persistence
 ```
 
-> v0.6.2 requires: fhir-definition ≥ 0.6.0, fhir-runtime ≥ 0.11.0, fhir-persistence ≥ 0.7.0
+> v0.7.0 requires: fhir-definition ≥ 0.6.0, fhir-runtime ≥ 0.11.0, fhir-persistence ≥ 0.9.0
 
 ## Quick Start
 
@@ -423,6 +428,65 @@ await sdIndex.ensureTable();
 const entries = await sdIndex.getByType("Patient");
 ```
 
+## Token Search (v0.7.0+)
+
+FHIR token search parameters with all standard formats:
+
+```ts
+// Code-only (any system)
+const males = await engine.search("Patient", { gender: "male" });
+
+// Empty system + code
+const males2 = await engine.search("Patient", { gender: "|male" });
+
+// Full system|code
+const byMRN = await engine.search("Patient", {
+  identifier: "http://example.com/mrn|MRN001",
+});
+```
+
+## String Search (v0.7.0+)
+
+FHIR string search with case-insensitive prefix matching via HumanName lookup table:
+
+```ts
+// Search by name (matches family + given)
+const smiths = await engine.search("Patient", { name: "Smith" });
+
+// Search by family name
+const smiths2 = await engine.search("Patient", { family: "Smith" });
+
+// Search by given name
+const johns = await engine.search("Patient", { given: "John" });
+```
+
+## Optimistic Locking (v0.7.0+)
+
+```ts
+import { ResourceVersionConflictError } from "fhir-engine";
+
+try {
+  await engine.persistence.updateResource("Patient", updatedPatient, {
+    ifMatch: expectedVersionId,
+  });
+} catch (e) {
+  if (e instanceof ResourceVersionConflictError) {
+    // 412 Precondition Failed — version mismatch
+  }
+}
+```
+
+## Error Types (v0.7.0+)
+
+```ts
+import {
+  RepositoryError,
+  ResourceNotFoundError,
+  ResourceVersionConflictError,
+  ResourceGoneError,
+} from "fhir-engine";
+```
+
 ## Batch Validation (v0.6.0+)
 
 Validate multiple resources in a single call:
@@ -467,8 +531,8 @@ const engine = await createFhirEngine({
 
 ## Upstream Dependency Versions
 
-| Package          | Required | Features added in this version                                                                                      |
-| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
-| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient                                                    |
-| fhir-runtime     | ≥ 0.11.0 | IG Extraction API, Profile Slicing, Choice Type, BackboneElement utils, `inferComplexType` bugfix                   |
-| fhir-persistence | ≥ 0.7.0  | Conformance storage module (IG index, SD/element index, expansion cache, concept hierarchy, IG import orchestrator) |
+| Package          | Required | Features added in this version                                                                               |
+| ---------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| fhir-definition  | ≥ 0.6.0  | Semver range resolution, retry/offline for PackageRegistryClient                                             |
+| fhir-runtime     | ≥ 0.11.0 | IG Extraction API, Profile Slicing, Choice Type, BackboneElement utils, `inferComplexType` bugfix            |
+| fhir-persistence | ≥ 0.9.0  | Token search fix, string search fix, optimistic locking, conformance storage module, search bundle utilities |

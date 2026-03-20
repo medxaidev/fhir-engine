@@ -1,0 +1,12 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "Patient-identifier",
+  "url": "http://hl7.org/fhir/SearchParameter/Patient-identifier",
+  "version": "4.0.1",
+  "name": "identifier",
+  "status": "active",
+  "code": "identifier",
+  "base": ["Patient"],
+  "type": "token",
+  "expression": "Patient.identifier"
+}

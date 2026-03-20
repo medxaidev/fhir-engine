@@ -1,8 +1,8 @@
 # FHIR Engine 接入指南 (Integration Guide)
 
-**文档版本**: v1.2.0  
-**适用引擎版本**: fhir-engine >= 0.6.2  
-**最后更新**: 2026-03-18
+**文档版本**: v1.3.0  
+**适用引擎版本**: fhir-engine >= 0.7.0  
+**最后更新**: 2026-03-20
 
 ---
 
@@ -16,9 +16,9 @@
 
 ### 核心依赖版本 (Core Dependencies)
 
-- **fhir-engine**: ^0.6.2
+- **fhir-engine**: ^0.7.0
 - **fhir-definition**: ^0.6.0
-- **fhir-persistence**: ^0.7.0
+- **fhir-persistence**: ^0.9.0
 - **fhir-runtime**: ^0.11.0
 
 ### 数据库支持 (Database Support)

@@ -1,0 +1,12 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "Patient-address",
+  "url": "http://hl7.org/fhir/SearchParameter/Patient-address",
+  "version": "4.0.1",
+  "name": "address",
+  "status": "active",
+  "code": "address",
+  "base": ["Patient"],
+  "type": "string",
+  "expression": "Patient.address"
+}

@@ -459,6 +459,149 @@ describe('createFhirEngine', () => {
     await result;
   });
 
+  // ── Token search (UPS-1) (6 tests) ───────────────────────────
+
+  it('search() token: gender=male (code-only, any system)', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      gender: 'male',
+    });
+    const result = await engine.search('Patient', { gender: 'male' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() token: gender=|male (empty system)', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      gender: 'male',
+    });
+    const result = await engine.search('Patient', { gender: '|male' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() token: gender=male does not match female', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      gender: 'female',
+    });
+    const result = await engine.search('Patient', { gender: 'male' });
+    expect(result.resources.length).toBe(0);
+  });
+
+  it('search() token: identifier with system|code (exact match)', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      identifier: [{ system: 'http://example.com/mrn', value: 'MRN001' }],
+    });
+    const result = await engine.search('Patient', { identifier: 'http://example.com/mrn|MRN001' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() token: identifier with code-only (any system)', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      identifier: [{ system: 'http://example.com/mrn', value: 'MRN001' }],
+    });
+    const result = await engine.search('Patient', { identifier: 'MRN001' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() token: identifier with wrong system returns empty', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      identifier: [{ system: 'http://example.com/mrn', value: 'MRN001' }],
+    });
+    const result = await engine.search('Patient', { identifier: 'http://other.com|MRN001' });
+    expect(result.resources.length).toBe(0);
+  });
+
+  // ── String search (UPS-2) (5 tests) ─────────────────────────
+
+  it('search() string: name=Smith matches family name', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Smith', given: ['John'] }],
+    });
+    const result = await engine.search('Patient', { name: 'Smith' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() string: family=Smith matches family name', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Smith', given: ['John'] }],
+    });
+    const result = await engine.search('Patient', { family: 'Smith' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() string: given=John matches given name', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Smith', given: ['John'] }],
+    });
+    const result = await engine.search('Patient', { given: 'John' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() string: name search is case-insensitive', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Smith' }],
+    });
+    const result = await engine.search('Patient', { name: 'smith' });
+    expect(result.resources.length).toBe(1);
+  });
+
+  it('search() string: name=Unknown returns empty', async () => {
+    engine = await createFhirEngine(baseConfig());
+    await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Smith' }],
+    });
+    const result = await engine.search('Patient', { name: 'Unknown' });
+    expect(result.resources.length).toBe(0);
+  });
+
+  // ── Optimistic locking (UPS-3) (2 tests) ────────────────────
+
+  it('updateResource with correct ifMatch succeeds', async () => {
+    engine = await createFhirEngine(baseConfig());
+    const created = await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Locking' }],
+    });
+    const updated = await engine.persistence.updateResource('Patient', {
+      ...created,
+      name: [{ family: 'Updated' }],
+    }, { ifMatch: created.meta!.versionId! });
+    expect(updated.meta!.versionId).not.toBe(created.meta!.versionId);
+  });
+
+  it('updateResource with wrong ifMatch throws ResourceVersionConflictError', async () => {
+    engine = await createFhirEngine(baseConfig());
+    const created = await engine.persistence.createResource('Patient', {
+      resourceType: 'Patient',
+      name: [{ family: 'Locking' }],
+    });
+    await expect(
+      engine.persistence.updateResource('Patient', {
+        ...created,
+        name: [{ family: 'Conflict' }],
+      }, { ifMatch: 'wrong-version-id' }),
+    ).rejects.toThrow();
+  });
+
   // ── Re-exported FHIRPath functions (5 tests) ──────────────────
 
   it('evalFhirPath is re-exported and evaluates expressions', async () => {

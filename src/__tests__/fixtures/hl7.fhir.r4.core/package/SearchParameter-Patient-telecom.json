@@ -1,0 +1,12 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "Patient-telecom",
+  "url": "http://hl7.org/fhir/SearchParameter/Patient-telecom",
+  "version": "4.0.1",
+  "name": "telecom",
+  "status": "active",
+  "code": "telecom",
+  "base": ["Patient"],
+  "type": "token",
+  "expression": "Patient.telecom"
+}

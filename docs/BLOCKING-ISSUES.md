@@ -1,8 +1,8 @@
 # 阻塞问题上报模版 (Blocking Issues Template)
 
-**文档版本**: v1.2.0  
-**适用引擎版本**: fhir-engine >= 0.6.2  
-**最后更新**: 2026-03-18
+**文档版本**: v1.3.0  
+**适用引擎版本**: fhir-engine >= 0.7.0  
+**最后更新**: 2026-03-20
 
 ---
 
@@ -268,9 +268,9 @@ const config = defineConfig({
 
 | 组件             | 当前最新版本 | 最低支持版本 |
 | ---------------- | ------------ | ------------ |
-| fhir-engine      | 0.6.2        | 0.6.2        |
+| fhir-engine      | 0.7.0        | 0.7.0        |
 | fhir-runtime     | 0.11.0       | 0.11.0       |
-| fhir-persistence | 0.7.0        | 0.7.0        |
+| fhir-persistence | 0.9.0        | 0.9.0        |
 | fhir-definition  | 0.6.0        | 0.6.0        |
 | Node.js          | 20.x         | 18.0.0       |
 

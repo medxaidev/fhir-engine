@@ -1,8 +1,8 @@
 # FHIR Engine API 参考文档 (API Reference)
 
-**文档版本**: v1.2.0  
-**适用引擎版本**: fhir-engine >= 0.6.2  
-**最后更新**: 2026-03-18
+**文档版本**: v1.3.0  
+**适用引擎版本**: fhir-engine >= 0.7.0  
+**最后更新**: 2026-03-20
 
 ---
 
@@ -10,16 +10,21 @@
 
 | API 功能            | 最低版本                 | 推荐版本 |
 | ------------------- | ------------------------ | -------- |
-| Core Engine API     | 0.6.0                    | 0.6.2    |
-| Search API          | 0.6.0                    | 0.6.2    |
-| Reindex V2 API      | 0.6.0                    | 0.6.2    |
+| Core Engine API     | 0.6.0                    | 0.7.0    |
+| Search API          | 0.6.0                    | 0.7.0    |
+| Token Search        | 0.7.0                    | 0.7.0    |
+| String Search       | 0.7.0                    | 0.7.0    |
+| Optimistic Locking  | 0.7.0                    | 0.7.0    |
+| Error Types         | 0.7.0                    | 0.7.0    |
+| Search Bundle Utils | 0.7.0                    | 0.7.0    |
+| Reindex V2 API      | 0.6.0                    | 0.7.0    |
 | Batch Validation    | 0.9.0 (fhir-runtime)     | 0.11.0   |
 | FHIRPath Evaluation | 0.9.0 (fhir-runtime)     | 0.11.0   |
 | Profile Slicing API | 0.10.0 (fhir-runtime)    | 0.11.0   |
 | Choice Type API     | 0.10.0 (fhir-runtime)    | 0.11.0   |
 | BackboneElement API | 0.10.0 (fhir-runtime)    | 0.11.0   |
 | IG Extraction API   | 0.11.0 (fhir-runtime)    | 0.11.0   |
-| Conformance Module  | 0.7.0 (fhir-persistence) | 0.7.0    |
+| Conformance Module  | 0.7.0 (fhir-persistence) | 0.9.0    |
 
 ---
 

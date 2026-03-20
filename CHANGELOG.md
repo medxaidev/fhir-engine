@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-03-20
+
+### Changed
+
+- **`fhir-persistence` dependency** — upgraded from `^0.7.0` to `^0.9.0` (token search fix, string search fix, optimistic locking)
+
+### Added
+
+- **Token search support (UPS-1)** — `gender=male`, `gender=|male`, `identifier=system|code`, `identifier=code` all work correctly with token-column strategy
+- **String search support (UPS-2)** — `name=Smith`, `family=Smith`, `given=John` work correctly via HumanName lookup table; case-insensitive prefix matching
+- **Optimistic locking (UPS-3)** — `updateResource()` with `ifMatch` option throws `ResourceVersionConflictError` on version mismatch
+- **Re-exported error types** — `RepositoryError`, `ResourceNotFoundError`, `ResourceVersionConflictError`, `ResourceGoneError` from fhir-persistence
+- **Re-exported search bundle utilities** — `buildSearchBundle`, `buildPaginationContext`, `buildNextLink`, `buildSelfLink`, `hasNextPage`, `splitSearchValues`, `hashToken`, `DEFAULT_SEARCH_COUNT`, `MAX_SEARCH_COUNT` and types `SearchBundle`, `SearchBundleEntry`, `BuildSearchBundleOptions`, `PaginationContext`
+- **R4 SearchParameter fixtures** — added `name`, `identifier`, `active`, `address`, `telecom` SearchParameters for Patient to test fixtures
+- **13 new E2E tests** — 6 token search, 5 string search, 2 optimistic locking (total: 110 tests)
+
+### Notes
+
+- fhir-persistence v0.8.0 fixed token-column DDL/WHERE column name alignment (Bug-1, Bug-2)
+- fhir-persistence v0.9.0 fixed token search code-only and empty-system matching (Bug-3)
+- String search via lookup tables requires `name` SearchParameter pointing to `Patient.name` (HumanName object), not just `family`/`given` leaf SPs
+- No breaking changes — minor version bump (0.6.2 → 0.7.0) for new search capabilities
+
+---
+
 ## [0.6.2] - 2026-03-18
 
 ### Changed

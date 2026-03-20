@@ -1,8 +1,8 @@
 # FHIR Engine 文档中心 (Documentation Hub)
 
-**文档版本**: v1.2.0  
-**适用引擎版本**: fhir-engine >= 0.6.2  
-**最后更新**: 2026-03-18
+**文档版本**: v1.3.0  
+**适用引擎版本**: fhir-engine >= 0.7.0  
+**最后更新**: 2026-03-20
 
 ---
 
@@ -16,9 +16,9 @@
 
 ### 当前版本
 
-- **fhir-engine**: 0.6.2
+- **fhir-engine**: 0.7.0
 - **fhir-runtime**: 0.11.0
-- **fhir-persistence**: 0.7.0
+- **fhir-persistence**: 0.9.0
 - **fhir-definition**: 0.6.0
 
 ### 环境要求
@@ -407,11 +407,12 @@ npx tsx scripts/reindex.ts
 
 ## 文档版本历史 (Documentation Version History)
 
-| 版本   | 日期       | 变更说明                                                                                             |
-| ------ | ---------- | ---------------------------------------------------------------------------------------------------- |
-| v1.2.0 | 2026-03-18 | 升级 fhir-runtime 0.11.0、fhir-persistence 0.7.0，新增 IG Extraction API 和 Conformance 存储模块文档 |
-| v1.1.0 | 2026-03-18 | 升级 fhir-runtime 0.10.0，新增 Profile Slicing、Choice Type、BackboneElement API 文档                |
-| v1.0.0 | 2026-03-17 | 初始版本，包含完整文档集合                                                                           |
+| 版本   | 日期       | 变更说明                                                                                                           |
+| ------ | ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| v1.3.0 | 2026-03-20 | 升级 fhir-persistence 0.9.0，新增 Token Search、String Search、Optimistic Locking、Error Types、Search Bundle 文档 |
+| v1.2.0 | 2026-03-18 | 升级 fhir-runtime 0.11.0、fhir-persistence 0.7.0，新增 IG Extraction API 和 Conformance 存储模块文档               |
+| v1.1.0 | 2026-03-18 | 升级 fhir-runtime 0.10.0，新增 Profile Slicing、Choice Type、BackboneElement API 文档                              |
+| v1.0.0 | 2026-03-17 | 初始版本，包含完整文档集合                                                                                         |
 
 ---
 
